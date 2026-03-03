@@ -1,0 +1,24 @@
+# Build outputs
+build/
+*.apk
+*.aab
+
+# Gradle
+.gradle/
+local.properties
+
+# Kotlin/JS
+kotlin-js-store/
+
+# IDE
+.idea/
+*.iml
+
+# HoDoKu reference source (not part of the app)
+Hodoku/
+
+# Obsidian docs (symlinked from vault)
+obsidian/
+
+# OS junk
+.DS_Store
