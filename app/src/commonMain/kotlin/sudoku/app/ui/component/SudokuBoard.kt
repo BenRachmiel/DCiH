@@ -153,8 +153,9 @@ fun SudokuBoard(
                     drawRect(sameDigitColor, topLeft, cellRect)
                 }
 
-                // Layer 4: Peer highlight (skip when multi-selecting)
-                if (state.multiSelectedCells.isEmpty() &&
+                // Layer 4: Peer highlight (skip when multi-selecting or disabled)
+                if (state.peerHighlight &&
+                    state.multiSelectedCells.isEmpty() &&
                     selectedIdx >= 0 && !(row == state.selectedRow && col == state.selectedCol) &&
                     (row == state.selectedRow || col == state.selectedCol ||
                             (row / 3 == state.selectedRow / 3 && col / 3 == state.selectedCol / 3))

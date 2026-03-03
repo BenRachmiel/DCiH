@@ -25,6 +25,24 @@ fun GameToolbar(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (state.peerHighlight) {
+            FilledTonalButton(
+                onClick = { onAction(GameAction.TogglePeerHighlight) },
+                shape = btnShape,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text("Peers", fontSize = 14.sp)
+            }
+        } else {
+            OutlinedButton(
+                onClick = { onAction(GameAction.TogglePeerHighlight) },
+                shape = btnShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text("Peers", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
         OutlinedButton(
             onClick = { onAction(GameAction.FillAllCandidates) },
             shape = btnShape,

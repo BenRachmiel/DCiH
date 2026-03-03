@@ -19,5 +19,6 @@ sealed class GameAction {
     data class DoubleTapCell(val row: Int, val col: Int) : GameAction()
     data object ToggleBivalueHighlight : GameAction()
     data object ToggleTrovalueHighlight : GameAction()
+    data object TogglePeerHighlight : GameAction()
     data class DragSelectCells(val cells: Set<Int>) : GameAction()
 }

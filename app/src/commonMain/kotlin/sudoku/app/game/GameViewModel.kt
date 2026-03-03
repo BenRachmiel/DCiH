@@ -37,6 +37,7 @@ class GameViewModel {
             is GameAction.DoubleTapCell -> doubleTapCell(action.row, action.col)
             is GameAction.ToggleBivalueHighlight -> toggleBivalueHighlight()
             is GameAction.ToggleTrovalueHighlight -> toggleTrovalueHighlight()
+            is GameAction.TogglePeerHighlight -> togglePeerHighlight()
             is GameAction.DragSelectCells -> dragSelectCells(action.cells)
         }
     }
@@ -222,6 +223,11 @@ class GameViewModel {
     private fun toggleTrovalueHighlight() {
         val s = _state.value
         _state.value = s.copy(trivalueHighlight = !s.trivalueHighlight)
+    }
+
+    private fun togglePeerHighlight() {
+        val s = _state.value
+        _state.value = s.copy(peerHighlight = !s.peerHighlight)
     }
 
     private fun doubleTapCell(row: Int, col: Int) {

@@ -37,6 +37,8 @@ data class GameState(
     val bivalueHighlight: Boolean = false,
     /** Trivalue cell highlighting enabled */
     val trivalueHighlight: Boolean = false,
+    /** Peer (row/col/box) shading on selected cell */
+    val peerHighlight: Boolean = true,
     /** Number of incorrect digits placed */
     val errorCount: Int = 0,
     /** Cells selected via click-and-drag (indices 0-80) */
@@ -67,6 +69,7 @@ data class GameState(
                 filterDigit == other.filterDigit &&
                 bivalueHighlight == other.bivalueHighlight &&
                 trivalueHighlight == other.trivalueHighlight &&
+                peerHighlight == other.peerHighlight &&
                 errorCount == other.errorCount &&
                 multiSelectedCells == other.multiSelectedCells
     }
@@ -79,6 +82,7 @@ data class GameState(
         result = result * 31 + filterDigit
         result = result * 31 + if (bivalueHighlight) 1 else 0
         result = result * 31 + if (trivalueHighlight) 1 else 0
+        result = result * 31 + if (peerHighlight) 1 else 0
         result = result * 31 + errorCount
         result = result * 31 + multiSelectedCells.hashCode()
         return result

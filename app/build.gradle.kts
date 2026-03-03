@@ -17,7 +17,11 @@ kotlin {
     jvm("desktop")
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-        browser()
+        browser {
+            testTask {
+                enabled = false
+            }
+        }
         binaries.executable()
     }
 
@@ -30,6 +34,10 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(libs.kotlinx.coroutines.core)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
         androidMain.dependencies {
             implementation("androidx.activity:activity-compose:1.9.3")

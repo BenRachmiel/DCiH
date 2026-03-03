@@ -90,6 +90,7 @@ fun GameScreen(onNavigateHome: () -> Unit = {}) {
                     Key.Nine, Key.NumPad9 -> { viewModel.onAction(GameAction.EnterDigit(9)); true }
                     Key.Delete, Key.Backspace -> { viewModel.onAction(GameAction.Erase); true }
                     Key.P -> { viewModel.onAction(GameAction.TogglePencilMode); true }
+                    Key.H -> { viewModel.onAction(GameAction.TogglePeerHighlight); true }
                     Key.Z -> {
                         if (event.isCtrlPressed) { viewModel.onAction(GameAction.Undo); true }
                         else false
