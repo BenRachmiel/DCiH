@@ -9,6 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,10 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import sudoku.app.learn.ExampleCache
 import sudoku.app.learn.allEntries
 import sudoku.app.learn.searchStrategies
 import sudoku.app.learn.strategyEntries
 import sudoku.app.ui.component.ExampleBoard
+import sudoku.core.model.BoardExample
 import sudoku.core.model.HighlightRole
 import sudoku.core.model.SolutionType
 import sudoku.core.model.StrategyCategory
@@ -30,12 +35,13 @@ import sudoku.core.model.StrategyEntry
 fun LearnScreen(
     technique: SolutionType?,
     onBack: () -> Unit,
+    onHome: () -> Unit,
     onNavigateTechnique: (SolutionType) -> Unit,
 ) {
     if (technique != null) {
         val entry = strategyEntries[technique]
         if (entry != null) {
-            DetailView(entry, onBack, onNavigateTechnique)
+            DetailView(entry, onBack, onHome, onNavigateTechnique)
         } else {
             // Fallback for techniques without entries (BRUTE_FORCE)
             Surface(
@@ -109,9 +115,10 @@ private fun ListView(
 
 @Composable
 private fun CategorizedList(onNavigateTechnique: (SolutionType) -> Unit) {
-    val grouped = remember {
-        allEntries.groupBy { it.type.category }
-    }
+    val grouped =
+        remember {
+            allEntries.groupBy { it.type.category }
+        }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -173,10 +180,11 @@ private fun StrategyListItem(
     onNavigateTechnique: (SolutionType) -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onNavigateTechnique(entry.type) }
-            .padding(vertical = 2.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onNavigateTechnique(entry.type) }
+                .padding(vertical = 2.dp),
         shape = MaterialTheme.shapes.small,
     ) {
         Row(
@@ -200,34 +208,49 @@ private fun StrategyListItem(
 
 // ── Detail View ──────────────────────────────────────────────────────────────
 
-private val legendItems = listOf(
-    HighlightRole.DEFINING to Pair(Color(0xFF4CAF50), "Pattern"),
-    HighlightRole.ELIMINATION to Pair(Color(0xFFEF5350), "Eliminated"),
-    HighlightRole.SECONDARY to Pair(Color(0xFF42A5F5), "Structure"),
-    HighlightRole.COLOR_A to Pair(Color(0xFF66BB6A), "Color A"),
-    HighlightRole.COLOR_B to Pair(Color(0xFFAB47BC), "Color B"),
-)
+private val legendItems =
+    listOf(
+        HighlightRole.DEFINING to Pair(Color(0xFF4CAF50), "Pattern"),
+        HighlightRole.ELIMINATION to Pair(Color(0xFFEF5350), "Eliminated"),
+        HighlightRole.SECONDARY to Pair(Color(0xFF42A5F5), "Structure"),
+        HighlightRole.COLOR_A to Pair(Color(0xFF66BB6A), "Color A"),
+        HighlightRole.COLOR_B to Pair(Color(0xFFAB47BC), "Color B"),
+    )
 
 @Composable
 private fun DetailView(
     entry: StrategyEntry,
     onBack: () -> Unit,
+    onHome: () -> Unit,
     onNavigateTechnique: (SolutionType) -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val generatedExamples by ExampleCache.examples.collectAsState()
+    val generatingType by ExampleCache.generating.collectAsState()
+    val resolvedExample: BoardExample? = generatedExamples[entry.type] ?: entry.example
+
+    val entryIndex = remember(entry.type) { allEntries.indexOfFirst { it.type == entry.type } }
+    val prevEntry = if (entryIndex > 0) allEntries[entryIndex - 1] else null
+    val nextEntry = if (entryIndex < allEntries.size - 1) allEntries[entryIndex + 1] else null
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
         ) {
-            // Back + title
+            // Back + home + title
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                }
+                IconButton(onClick = onHome) {
+                    Icon(Icons.Default.Home, "Home")
                 }
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -257,46 +280,89 @@ private fun DetailView(
 
             Spacer(Modifier.height(16.dp))
 
-            // Example board
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                ExampleBoard(
-                    example = entry.example,
-                    modifier = Modifier.widthIn(max = 400.dp),
-                )
+            // Example board + refresh button
+            if (resolvedExample != null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ExampleBoard(
+                        example = resolvedExample,
+                        modifier = Modifier.widthIn(max = 400.dp),
+                    )
+                }
+                if (entry.type.hasSolver) {
+                    val isGenerating = generatingType == entry.type
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd,
+                    ) {
+                        IconButton(
+                            onClick = { ExampleCache.regenerate(entry.type, scope) },
+                            enabled = !isGenerating,
+                        ) {
+                            if (isGenerating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "New example",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Example unavailable",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))
 
             // Color legend
-            val usedRoles = remember(entry.example.highlights) {
-                entry.example.highlights.map { it.role }.toSet()
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                for ((role, colorAndLabel) in legendItems) {
-                    if (role !in usedRoles) continue
-                    val (color, label) = colorAndLabel
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(12.dp),
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = color,
-                        ) {}
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
+            if (resolvedExample != null) {
+                val usedRoles =
+                    remember(resolvedExample.highlights) {
+                        resolvedExample.highlights.map { it.role }.toSet()
+                    }
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    for ((role, colorAndLabel) in legendItems) {
+                        if (role !in usedRoles) continue
+                        val (color, label) = colorAndLabel
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(12.dp),
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = color,
+                            ) {}
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                     }
                 }
             }
@@ -341,9 +407,10 @@ private fun DetailView(
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     for (related in entry.relatedTypes) {
@@ -355,7 +422,34 @@ private fun DetailView(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            // Prev / Next navigation
+            Spacer(Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (prevEntry != null) {
+                    TextButton(onClick = { onNavigateTechnique(prevEntry.type) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(prevEntry.type.displayName)
+                    }
+                } else {
+                    Spacer(Modifier.width(1.dp))
+                }
+                if (nextEntry != null) {
+                    TextButton(onClick = { onNavigateTechnique(nextEntry.type) }) {
+                        Text(nextEntry.type.displayName)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
+                    }
+                } else {
+                    Spacer(Modifier.width(1.dp))
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

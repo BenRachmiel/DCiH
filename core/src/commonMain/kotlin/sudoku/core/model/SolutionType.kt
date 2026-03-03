@@ -44,8 +44,25 @@ enum class SolutionType(
     X_CHAIN("X-Chain", 260, StrategyCategory.CHAINS, Difficulty.EXTREME),
     XY_CHAIN("XY-Chain", 260, StrategyCategory.CHAINS, Difficulty.EXTREME),
 
-    BRUTE_FORCE("Brute Force", 10000, StrategyCategory.BRUTE_FORCE, Difficulty.EXTREME);
+    BRUTE_FORCE("Brute Force", 10000, StrategyCategory.BRUTE_FORCE, Difficulty.EXTREME),
+    ;
 
     val isSingle: Boolean
         get() = this == FULL_HOUSE || this == NAKED_SINGLE || this == HIDDEN_SINGLE
+
+    /** Whether this technique has a working solver implementation. */
+    val hasSolver: Boolean
+        get() =
+            when (this) {
+                FULL_HOUSE, NAKED_SINGLE, HIDDEN_SINGLE,
+                LOCKED_CANDIDATES_1, LOCKED_CANDIDATES_2,
+                NAKED_PAIR, NAKED_TRIPLE, NAKED_QUADRUPLE,
+                HIDDEN_PAIR, HIDDEN_TRIPLE, HIDDEN_QUADRUPLE,
+                X_WING, SWORDFISH, JELLYFISH,
+                XY_WING, XYZ_WING, W_WING,
+                SIMPLE_COLORS_TRAP, SIMPLE_COLORS_WRAP,
+                -> true
+
+                else -> false
+            }
 }
