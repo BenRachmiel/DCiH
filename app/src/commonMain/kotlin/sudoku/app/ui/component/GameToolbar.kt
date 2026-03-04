@@ -53,12 +53,12 @@ fun GameToolbar(
                 Text("Peers", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
         }
-        // Hint button — label changes with hint level
+        // Hint button — short fixed-width labels; detail shown in HintTextRow
         val hintLabel =
             when (state.hintLevel) {
-                1 -> state.hintMessage ?: state.hintStep?.describeVague() ?: "Hint"
-                2 -> state.hintMessage ?: state.hintStep?.describeConcrete() ?: "Hint"
-                3 -> "Showing"
+                1 -> "More"
+                2 -> "Show"
+                3 -> "Execute"
                 else -> "Hint"
             }
         if (state.hintLevel > 0) {

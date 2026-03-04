@@ -14,7 +14,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import sudoku.app.ui.component.animatedGradient
 
 @Composable
 fun HomeScreen(
@@ -24,13 +23,7 @@ fun HomeScreen(
     gradientEnabled: Boolean = true,
     onToggleGradient: () -> Unit = {},
 ) {
-    val bgModifier =
-        if (gradientEnabled) {
-            Modifier.fillMaxSize().animatedGradient()
-        } else {
-            Modifier.fillMaxSize()
-        }
-    Box(modifier = bgModifier) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,7 +1,9 @@
 package sudoku.app.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,15 +23,11 @@ import sudoku.app.ui.PlatformBackHandler
 import sudoku.app.ui.component.GameToolbar
 import sudoku.app.ui.component.NumberPad
 import sudoku.app.ui.component.SudokuBoard
-import sudoku.app.ui.component.animatedGradient
 import sudoku.app.ui.dialog.NewGameDialog
 import sudoku.app.ui.dialog.WinDialog
 
 @Composable
-fun GameScreen(
-    onNavigateHome: () -> Unit = {},
-    gradientEnabled: Boolean = true,
-) {
+fun GameScreen(onNavigateHome: () -> Unit = {}) {
     val viewModel = remember { GameViewModel() }
     val state by viewModel.state.collectAsState()
 
@@ -42,7 +40,6 @@ fun GameScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .let { if (gradientEnabled) it.animatedGradient() else it }
                 .focusRequester(focusRequester)
                 .focusable()
                 .onPreviewKeyEvent { event ->
@@ -320,6 +317,7 @@ private fun PortraitLayout(
             state = state,
             onAction = viewModel::onAction,
         )
+        HintTextRow(state)
         Spacer(Modifier.height(4.dp))
         // Number pad fills all remaining vertical space, scales as a unit
         NumberPad(
@@ -398,12 +396,40 @@ private fun LandscapeLayout(
                 state = state,
                 onAction = viewModel::onAction,
             )
+            HintTextRow(state)
             Spacer(Modifier.height(8.dp))
             NumberPad(
                 state = state,
                 onAction = viewModel::onAction,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
+        }
+    }
+}
+
+@Composable
+private fun HintTextRow(state: sudoku.app.game.GameState) {
+    if (state.hintLevel > 0) {
+        val text =
+            if (state.hintLevel == 1) {
+                state.hintMessage ?: state.hintStep?.describeVague() ?: ""
+            } else {
+                state.hintMessage ?: state.hintStep?.describeConcrete() ?: ""
+            }
+        if (text.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
+            ) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
         }
     }
 }

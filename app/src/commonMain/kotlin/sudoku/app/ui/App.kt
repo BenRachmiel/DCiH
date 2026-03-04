@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import sudoku.app.navigation.Screen
+import sudoku.app.ui.component.animatedGradient
 import sudoku.app.ui.screen.GameScreen
 import sudoku.app.ui.screen.HomeScreen
 import sudoku.app.ui.screen.LearnScreen
@@ -19,11 +20,14 @@ fun App() {
         var currentScreen: Screen by remember { mutableStateOf(Screen.Home) }
         var gradientEnabled by remember { mutableStateOf(true) }
 
+        val bgModifier =
+            if (gradientEnabled) {
+                Modifier.fillMaxSize().animatedGradient()
+            } else {
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)
+            }
         Box(
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .safeDrawingPadding(),
+            bgModifier.safeDrawingPadding(),
         ) {
             when (currentScreen) {
                 is Screen.Home -> {
@@ -39,7 +43,6 @@ fun App() {
                 is Screen.Play -> {
                     GameScreen(
                         onNavigateHome = { currentScreen = Screen.Home },
-                        gradientEnabled = gradientEnabled,
                     )
                 }
 
