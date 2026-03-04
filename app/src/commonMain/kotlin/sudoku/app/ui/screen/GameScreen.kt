@@ -21,11 +21,15 @@ import sudoku.app.ui.PlatformBackHandler
 import sudoku.app.ui.component.GameToolbar
 import sudoku.app.ui.component.NumberPad
 import sudoku.app.ui.component.SudokuBoard
+import sudoku.app.ui.component.animatedGradient
 import sudoku.app.ui.dialog.NewGameDialog
 import sudoku.app.ui.dialog.WinDialog
 
 @Composable
-fun GameScreen(onNavigateHome: () -> Unit = {}) {
+fun GameScreen(
+    onNavigateHome: () -> Unit = {},
+    gradientEnabled: Boolean = true,
+) {
     val viewModel = remember { GameViewModel() }
     val state by viewModel.state.collectAsState()
 
@@ -38,6 +42,7 @@ fun GameScreen(onNavigateHome: () -> Unit = {}) {
         modifier =
             Modifier
                 .fillMaxSize()
+                .let { if (gradientEnabled) it.animatedGradient() else it }
                 .focusRequester(focusRequester)
                 .focusable()
                 .onPreviewKeyEvent { event ->
@@ -182,7 +187,7 @@ fun GameScreen(onNavigateHome: () -> Unit = {}) {
                         }
                     }
                 },
-        color = MaterialTheme.colorScheme.surface,
+        color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
         if (state.isGenerating) {
             Box(
@@ -192,7 +197,11 @@ fun GameScreen(onNavigateHome: () -> Unit = {}) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(16.dp))
-                    Text("Generating puzzle...", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Generating puzzle...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         } else {

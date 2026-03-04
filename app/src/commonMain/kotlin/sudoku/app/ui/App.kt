@@ -17,6 +17,7 @@ import sudoku.app.ui.theme.SudokuTheme
 fun App() {
     SudokuTheme {
         var currentScreen: Screen by remember { mutableStateOf(Screen.Home) }
+        var gradientEnabled by remember { mutableStateOf(true) }
 
         Box(
             Modifier
@@ -30,12 +31,15 @@ fun App() {
                         onPlayClick = { currentScreen = Screen.Play },
                         onLearnClick = { currentScreen = Screen.Learn() },
                         onPracticeClick = { currentScreen = Screen.Practice() },
+                        gradientEnabled = gradientEnabled,
+                        onToggleGradient = { gradientEnabled = !gradientEnabled },
                     )
                 }
 
                 is Screen.Play -> {
                     GameScreen(
                         onNavigateHome = { currentScreen = Screen.Home },
+                        gradientEnabled = gradientEnabled,
                     )
                 }
 

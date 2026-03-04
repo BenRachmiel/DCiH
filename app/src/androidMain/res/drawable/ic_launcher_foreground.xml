@@ -1,0 +1,67 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Safe zone: 24-84 (60x60 centered) -->
+    <!-- 3x3 grid, no outer border — floats naturally in circle/squircle masks -->
+
+    <!-- Internal grid lines only: warm charcoal #292524 -->
+    <!-- Vertical lines -->
+    <path
+        android:pathData="M44,26 L44,82"
+        android:strokeColor="#292524"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M64,26 L64,82"
+        android:strokeColor="#292524"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+
+    <!-- Horizontal lines -->
+    <path
+        android:pathData="M26,44 L82,44"
+        android:strokeColor="#292524"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M26,64 L82,64"
+        android:strokeColor="#292524"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+
+    <!-- Letters: D(0,0) C(0,2) i(2,0) H(2,2) — diagonal placement -->
+    <!-- Cell centers: (34,34) (74,34) (34,74) (74,74) -->
+
+    <!-- D at cell (0,0) — filled letterform -->
+    <path
+        android:pathData="M29,29 L33,29 Q39,29 39,34 Q39,39 33,39 L29,39 Z"
+        android:fillColor="#292524" />
+
+    <!-- C at cell (0,2) — open stroke -->
+    <path
+        android:pathData="M79,30 Q74,28 70,29 Q68,30 68,34 Q68,38 70,39 Q74,40 79,38"
+        android:strokeColor="#292524"
+        android:strokeWidth="2"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round" />
+
+    <!-- i at cell (2,0) — lowercase: dot + stem -->
+    <path
+        android:pathData="M34,69 m-1.3,0 a1.3,1.3 0 1,1 2.6,0 a1.3,1.3 0 1,1 -2.6,0"
+        android:fillColor="#292524" />
+    <path
+        android:pathData="M34,72 L34,79"
+        android:strokeColor="#292524"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- H at cell (2,2) — stroked letterform -->
+    <path
+        android:pathData="M69,69 L69,79 M79,69 L79,79 M69,74 L79,74"
+        android:strokeColor="#292524"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

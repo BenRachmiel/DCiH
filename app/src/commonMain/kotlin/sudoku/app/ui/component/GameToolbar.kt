@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import sudoku.app.game.GameAction
 import sudoku.app.game.GameState
+import sudoku.core.model.PuzzleJson
 
 private val btnShape = RoundedCornerShape(6.dp)
 
@@ -23,6 +24,10 @@ fun GameToolbar(
     onAction: (GameAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val outlinedColors =
+        ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
@@ -32,6 +37,7 @@ fun GameToolbar(
             FilledTonalButton(
                 onClick = { onAction(GameAction.TogglePeerHighlight) },
                 shape = btnShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text("Peers", fontSize = 14.sp)
@@ -40,7 +46,8 @@ fun GameToolbar(
             OutlinedButton(
                 onClick = { onAction(GameAction.TogglePeerHighlight) },
                 shape = btnShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = outlinedColors,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text("Peers", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -58,6 +65,7 @@ fun GameToolbar(
             FilledTonalButton(
                 onClick = { onAction(GameAction.RequestHint) },
                 shape = btnShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text(hintLabel, fontSize = 14.sp, maxLines = 1)
@@ -66,7 +74,8 @@ fun GameToolbar(
             OutlinedButton(
                 onClick = { onAction(GameAction.RequestHint) },
                 shape = btnShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = outlinedColors,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text("Hint", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -75,12 +84,13 @@ fun GameToolbar(
         OutlinedButton(
             onClick = { onAction(GameAction.FillAllCandidates) },
             shape = btnShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            colors = outlinedColors,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         ) {
             Text("Fill", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
-        ExportButton(state)
+        ExportButton(state, outlinedColors)
         Button(
             onClick = { onAction(GameAction.ShowNewGameDialog) },
             shape = btnShape,
@@ -97,7 +107,10 @@ fun GameToolbar(
 }
 
 @Composable
-private fun ExportButton(state: GameState) {
+private fun ExportButton(
+    state: GameState,
+    outlinedColors: ButtonColors,
+) {
     val clipboard = LocalClipboardManager.current
     var showCopied by remember { mutableStateOf(false) }
 
@@ -114,7 +127,8 @@ private fun ExportButton(state: GameState) {
             showCopied = true
         },
         shape = btnShape,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        colors = outlinedColors,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
     ) {
         Text(
@@ -126,17 +140,11 @@ private fun ExportButton(state: GameState) {
 }
 
 private fun buildExportString(state: GameState): String =
-    buildString {
-        // Line 1: 81-char puzzle string
-        for (v in state.values) append(v)
-        // Subsequent lines: pencil marks for non-empty cells
-        for (i in 0 until 81) {
-            val marks = state.pencilMarks[i]
-            if (marks.isNotEmpty()) {
-                append('\n')
-                append(i)
-                append(':')
-                append(marks.sorted().joinToString(""))
-            }
-        }
-    }
+    PuzzleJson
+        .fromGameState(
+            values = state.values,
+            fixed = state.fixed,
+            solution = state.solution,
+            pencilMarks = state.pencilMarks,
+            difficulty = state.difficulty,
+        ).toJson()

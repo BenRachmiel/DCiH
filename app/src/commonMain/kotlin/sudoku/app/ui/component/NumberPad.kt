@@ -27,7 +27,7 @@ import sudoku.app.game.GameState
 fun NumberPad(
     state: GameState,
     onAction: (GameAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         // Layout: [side col] [3x3 digits] [side col]
@@ -49,7 +49,7 @@ fun NumberPad(
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(gap),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Left column: Undo, Redo, Erase
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -77,21 +77,30 @@ fun NumberPad(
 
             // Right column: xy, xyz, Pencil
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                SideToggleButton(sideWidth, cellSize, btnShape,
+                SideToggleButton(
+                    sideWidth,
+                    cellSize,
+                    btnShape,
                     active = state.bivalueHighlight,
-                    onClick = { onAction(GameAction.ToggleBivalueHighlight) }
+                    onClick = { onAction(GameAction.ToggleBivalueHighlight) },
                 ) {
                     Text("xy", fontSize = sideFontSize, fontWeight = FontWeight.Bold)
                 }
-                SideToggleButton(sideWidth, cellSize, btnShape,
+                SideToggleButton(
+                    sideWidth,
+                    cellSize,
+                    btnShape,
                     active = state.trivalueHighlight,
-                    onClick = { onAction(GameAction.ToggleTrovalueHighlight) }
+                    onClick = { onAction(GameAction.ToggleTrovalueHighlight) },
                 ) {
                     Text("xyz", fontSize = sideFontSize, fontWeight = FontWeight.Bold)
                 }
-                SideToggleButton(sideWidth, cellSize, btnShape,
+                SideToggleButton(
+                    sideWidth,
+                    cellSize,
+                    btnShape,
                     active = state.pencilMode,
-                    onClick = { onAction(GameAction.TogglePencilMode) }
+                    onClick = { onAction(GameAction.TogglePencilMode) },
                 ) {
                     Icon(Icons.Default.Edit, "Pencil", modifier = Modifier.size(sideIconSize))
                 }
@@ -108,36 +117,39 @@ private fun DigitButton(
     onAction: (GameAction) -> Unit,
     modifier: Modifier,
     fontSize: TextUnit,
-    shape: RoundedCornerShape
+    shape: RoundedCornerShape,
 ) {
     val count = state.values.count { it == digit }
     val isComplete = count >= 9
     val isFiltered = state.filterDigit == digit
     val colors = MaterialTheme.colorScheme
 
-    val containerColor = when {
-        isFiltered -> colors.tertiaryContainer
-        isComplete -> colors.surfaceVariant.copy(alpha = 0.4f)
-        else -> colors.secondaryContainer
-    }
-    val contentColor = when {
-        isFiltered -> colors.onTertiaryContainer
-        isComplete -> colors.onSurfaceVariant.copy(alpha = 0.4f)
-        else -> colors.onSecondaryContainer
-    }
-    val borderColor = if (isFiltered) colors.tertiaryContainer else colors.outline
+    val containerColor =
+        when {
+            isFiltered -> colors.tertiaryContainer
+            isComplete -> colors.surfaceVariant.copy(alpha = 0.4f)
+            else -> colors.secondaryContainer
+        }
+    val contentColor =
+        when {
+            isFiltered -> colors.onTertiaryContainer
+            isComplete -> colors.onSurfaceVariant.copy(alpha = 0.4f)
+            else -> colors.onSecondaryContainer
+        }
+    val borderColor = if (isFiltered) colors.tertiaryContainer else colors.onSurfaceVariant
 
     Surface(
-        modifier = modifier
-            .clip(shape)
-            .combinedClickable(
-                onClick = { onAction(GameAction.EnterDigit(digit)) },
-                onLongClick = { onAction(GameAction.ToggleFilterDigit(digit)) }
-            ),
+        modifier =
+            modifier
+                .clip(shape)
+                .combinedClickable(
+                    onClick = { onAction(GameAction.EnterDigit(digit)) },
+                    onLongClick = { onAction(GameAction.ToggleFilterDigit(digit)) },
+                ),
         shape = shape,
         color = containerColor,
         contentColor = contentColor,
-        border = BorderStroke(1.dp, borderColor)
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(digit.toString(), fontSize = fontSize, fontWeight = FontWeight.Bold)
@@ -147,18 +159,20 @@ private fun DigitButton(
 
 @Composable
 private fun SideButton(
-    width: Dp, height: Dp, shape: RoundedCornerShape,
+    width: Dp,
+    height: Dp,
+    shape: RoundedCornerShape,
     onClick: () -> Unit,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
         modifier = Modifier.width(width).height(height),
         shape = shape,
-        color = Color.Transparent,
+        color = colors.surface,
         contentColor = colors.onSurfaceVariant,
-        border = BorderStroke(1.dp, colors.outline)
+        border = BorderStroke(1.dp, colors.onSurfaceVariant),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             content()
@@ -168,19 +182,21 @@ private fun SideButton(
 
 @Composable
 private fun SideToggleButton(
-    width: Dp, height: Dp, shape: RoundedCornerShape,
+    width: Dp,
+    height: Dp,
+    shape: RoundedCornerShape,
     active: Boolean,
     onClick: () -> Unit,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
         modifier = Modifier.width(width).height(height),
         shape = shape,
-        color = if (active) colors.tertiaryContainer else Color.Transparent,
+        color = if (active) colors.tertiaryContainer else colors.surface,
         contentColor = if (active) colors.onTertiaryContainer else colors.onSurfaceVariant,
-        border = BorderStroke(1.dp, if (active) colors.tertiaryContainer else colors.outline)
+        border = BorderStroke(1.dp, colors.onSurfaceVariant),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             content()

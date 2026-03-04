@@ -7,61 +7,63 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val LightColors = lightColorScheme(
-    surface = Color(0xFFFFFFFF),
-    onSurface = Color(0xFF09090B),
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF09090B),
-    primary = Color(0xFF18181B),
-    onPrimary = Color(0xFFFAFAFA),
-    primaryContainer = Color(0xFFF4F4F5),
-    onPrimaryContainer = Color(0xFF09090B),
-    secondary = Color(0xFFF4F4F5),
-    onSecondary = Color(0xFF18181B),
-    secondaryContainer = Color(0xFFF4F4F5),
-    onSecondaryContainer = Color(0xFF18181B),
-    tertiary = Color(0xFF18181B),
-    onTertiary = Color(0xFFFAFAFA),
-    tertiaryContainer = Color(0xFF18181B),
-    onTertiaryContainer = Color(0xFFFAFAFA),
-    surfaceVariant = Color(0xFFF4F4F5),
-    onSurfaceVariant = Color(0xFF71717A),
-    outline = Color(0xFFE4E4E7),
-    error = Color(0xFFEF4444),
-    onError = Color(0xFFFFFFFF),
-)
+private val LightColors =
+    lightColorScheme(
+        surface = Color(0xFFFDFBF7),
+        onSurface = Color(0xFF1C1917),
+        background = Color(0xFFFDFBF7),
+        onBackground = Color(0xFF1C1917),
+        primary = Color(0xFF292524),
+        onPrimary = Color(0xFFFAF9F7),
+        primaryContainer = Color(0xFFF5F0EB),
+        onPrimaryContainer = Color(0xFF1C1917),
+        secondary = Color(0xFFF0EBE5),
+        onSecondary = Color(0xFF292524),
+        secondaryContainer = Color(0xFFF0EBE5),
+        onSecondaryContainer = Color(0xFF292524),
+        tertiary = Color(0xFF292524),
+        onTertiary = Color(0xFFFAF9F7),
+        tertiaryContainer = Color(0xFF292524),
+        onTertiaryContainer = Color(0xFFFAF9F7),
+        surfaceVariant = Color(0xFFF0EBE5),
+        onSurfaceVariant = Color(0xFF78716C),
+        outline = Color(0xFFD6D3CE),
+        error = Color(0xFFEF4444),
+        onError = Color(0xFFFFFFFF),
+    )
 
-private val DarkColors = darkColorScheme(
-    surface = Color(0xFF09090B),
-    onSurface = Color(0xFFFAFAFA),
-    background = Color(0xFF09090B),
-    onBackground = Color(0xFFFAFAFA),
-    primary = Color(0xFFFAFAFA),
-    onPrimary = Color(0xFF18181B),
-    primaryContainer = Color(0xFF27272A),
-    onPrimaryContainer = Color(0xFFFAFAFA),
-    secondary = Color(0xFF27272A),
-    onSecondary = Color(0xFFFAFAFA),
-    secondaryContainer = Color(0xFF27272A),
-    onSecondaryContainer = Color(0xFFFAFAFA),
-    tertiary = Color(0xFFFAFAFA),
-    onTertiary = Color(0xFF18181B),
-    tertiaryContainer = Color(0xFFFAFAFA),
-    onTertiaryContainer = Color(0xFF18181B),
-    surfaceVariant = Color(0xFF27272A),
-    onSurfaceVariant = Color(0xFFA1A1AA),
-    outline = Color(0xFF27272A),
-    error = Color(0xFFF87171),
-    onError = Color(0xFF18181B),
-)
+private val DarkColors =
+    darkColorScheme(
+        surface = Color(0xFF1A1614),
+        onSurface = Color(0xFFF5F0EB),
+        background = Color(0xFF1A1614),
+        onBackground = Color(0xFFF5F0EB),
+        primary = Color(0xFFF5F0EB),
+        onPrimary = Color(0xFF1C1917),
+        primaryContainer = Color(0xFF302A27),
+        onPrimaryContainer = Color(0xFFF5F0EB),
+        secondary = Color(0xFF302A27),
+        onSecondary = Color(0xFFF5F0EB),
+        secondaryContainer = Color(0xFF302A27),
+        onSecondaryContainer = Color(0xFFF5F0EB),
+        tertiary = Color(0xFFF5F0EB),
+        onTertiary = Color(0xFF1C1917),
+        tertiaryContainer = Color(0xFFF5F0EB),
+        onTertiaryContainer = Color(0xFF1C1917),
+        surfaceVariant = Color(0xFF302A27),
+        onSurfaceVariant = Color(0xFFA8A29E),
+        outline = Color(0xFF302A27),
+        error = Color(0xFFF87171),
+        onError = Color(0xFF1C1917),
+    )
 
 @Composable
 fun SudokuTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        content = content
+        content = content,
     )
 }
