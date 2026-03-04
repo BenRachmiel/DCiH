@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import sudoku.app.game.GameAction
 import sudoku.app.game.GameViewModel
+import sudoku.app.ui.PlatformBackHandler
 import sudoku.app.ui.component.GameToolbar
 import sudoku.app.ui.component.NumberPad
 import sudoku.app.ui.component.SudokuBoard
@@ -27,6 +28,8 @@ import sudoku.app.ui.dialog.WinDialog
 fun GameScreen(onNavigateHome: () -> Unit = {}) {
     val viewModel = remember { GameViewModel() }
     val state by viewModel.state.collectAsState()
+
+    PlatformBackHandler(onBack = onNavigateHome)
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -148,6 +151,11 @@ fun GameScreen(onNavigateHome: () -> Unit = {}) {
 
                         Key.Slash -> {
                             viewModel.onAction(GameAction.RequestHint)
+                            true
+                        }
+
+                        Key.Escape -> {
+                            onNavigateHome()
                             true
                         }
 

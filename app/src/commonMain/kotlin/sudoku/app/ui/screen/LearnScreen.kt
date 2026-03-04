@@ -1,6 +1,7 @@
 package sudoku.app.ui.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,13 +18,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import sudoku.app.learn.ExampleCache
 import sudoku.app.learn.allEntries
 import sudoku.app.learn.searchStrategies
 import sudoku.app.learn.strategyEntries
+import sudoku.app.ui.PlatformBackHandler
 import sudoku.app.ui.component.ExampleBoard
 import sudoku.core.model.BoardExample
 import sudoku.core.model.HighlightRole
@@ -38,6 +43,8 @@ fun LearnScreen(
     onHome: () -> Unit,
     onNavigateTechnique: (SolutionType) -> Unit,
 ) {
+    PlatformBackHandler(onBack = onBack)
+
     if (technique != null) {
         val entry = strategyEntries[technique]
         if (entry != null) {
@@ -80,7 +87,17 @@ private fun ListView(
     var searchQuery by remember { mutableStateOf("") }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                        onBack()
+                        true
+                    } else {
+                        false
+                    }
+                },
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -234,13 +251,28 @@ private fun DetailView(
     val nextEntry = if (entryIndex < allEntries.size - 1) allEntries[entryIndex + 1] else null
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                        onBack()
+                        true
+                    } else {
+                        false
+                    }
+                },
         color = MaterialTheme.colorScheme.surface,
     ) {
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .focusRequester(focusRequester)
+                    .focusable()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
         ) {

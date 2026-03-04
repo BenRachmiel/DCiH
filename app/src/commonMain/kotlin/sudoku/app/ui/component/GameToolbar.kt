@@ -4,11 +4,14 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import sudoku.app.game.GameAction
 import sudoku.app.game.GameState
 
@@ -77,6 +80,7 @@ fun GameToolbar(
         ) {
             Text("Fill", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
+        ExportButton(state)
         Button(
             onClick = { onAction(GameAction.ShowNewGameDialog) },
             shape = btnShape,
@@ -91,3 +95,48 @@ fun GameToolbar(
         }
     }
 }
+
+@Composable
+private fun ExportButton(state: GameState) {
+    val clipboard = LocalClipboardManager.current
+    var showCopied by remember { mutableStateOf(false) }
+
+    if (showCopied) {
+        LaunchedEffect(Unit) {
+            delay(2000)
+            showCopied = false
+        }
+    }
+
+    OutlinedButton(
+        onClick = {
+            clipboard.setText(AnnotatedString(buildExportString(state)))
+            showCopied = true
+        },
+        shape = btnShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        Text(
+            if (showCopied) "Copied!" else "Export",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+private fun buildExportString(state: GameState): String =
+    buildString {
+        // Line 1: 81-char puzzle string
+        for (v in state.values) append(v)
+        // Subsequent lines: pencil marks for non-empty cells
+        for (i in 0 until 81) {
+            val marks = state.pencilMarks[i]
+            if (marks.isNotEmpty()) {
+                append('\n')
+                append(i)
+                append(':')
+                append(marks.sorted().joinToString(""))
+            }
+        }
+    }
