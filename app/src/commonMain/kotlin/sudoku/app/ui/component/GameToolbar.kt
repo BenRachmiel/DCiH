@@ -18,18 +18,18 @@ private val btnShape = RoundedCornerShape(6.dp)
 fun GameToolbar(
     state: GameState,
     onAction: (GameAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (state.peerHighlight) {
             FilledTonalButton(
                 onClick = { onAction(GameAction.TogglePeerHighlight) },
                 shape = btnShape,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text("Peers", fontSize = 14.sp)
             }
@@ -38,27 +38,54 @@ fun GameToolbar(
                 onClick = { onAction(GameAction.TogglePeerHighlight) },
                 shape = btnShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text("Peers", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+        // Hint button — label changes with hint level
+        val hintLabel =
+            when (state.hintLevel) {
+                1 -> state.hintStep?.describeVague() ?: "Hint"
+                2 -> state.hintStep?.describeConcrete() ?: "Hint"
+                3 -> "Showing"
+                else -> "Hint"
+            }
+        if (state.hintLevel > 0) {
+            FilledTonalButton(
+                onClick = { onAction(GameAction.RequestHint) },
+                shape = btnShape,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            ) {
+                Text(hintLabel, fontSize = 14.sp, maxLines = 1)
+            }
+        } else {
+            OutlinedButton(
+                onClick = { onAction(GameAction.RequestHint) },
+                shape = btnShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            ) {
+                Text("Hint", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
         }
         OutlinedButton(
             onClick = { onAction(GameAction.FillAllCandidates) },
             shape = btnShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         ) {
             Text("Fill", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
         Button(
             onClick = { onAction(GameAction.ShowNewGameDialog) },
             shape = btnShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         ) {
             Text("New", fontSize = 14.sp)
         }

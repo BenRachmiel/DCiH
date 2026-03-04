@@ -5,8 +5,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import sudoku.core.generator.Generator
+import sudoku.core.generator.buildHighlights
 import sudoku.core.model.Board
 import sudoku.core.model.Difficulty
+import sudoku.core.solver.StepFinder
 
 class GameViewModel {
     private val _state = MutableStateFlow(GameState(showNewGameDialog = true))
@@ -18,6 +20,10 @@ class GameViewModel {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var timerJob: Job? = null
     private var generateJob: Job? = null
+    private val stepFinder = StepFinder()
+
+    /** Cached solver board for building highlights at hint level 3. */
+    private var hintBoard: Board? = null
 
     fun onAction(action: GameAction) {
         when (action) {
@@ -39,10 +45,14 @@ class GameViewModel {
             is GameAction.ToggleTrovalueHighlight -> toggleTrovalueHighlight()
             is GameAction.TogglePeerHighlight -> togglePeerHighlight()
             is GameAction.DragSelectCells -> dragSelectCells(action.cells)
+            is GameAction.RequestHint -> requestHint()
         }
     }
 
-    private fun selectCell(row: Int, col: Int) {
+    private fun selectCell(
+        row: Int,
+        col: Int,
+    ) {
         val s = _state.value
         if (s.isWon) return
         _state.value = s.copy(selectedRow = row, selectedCol = col, multiSelectedCells = emptySet())
@@ -56,7 +66,7 @@ class GameViewModel {
     }
 
     private fun enterDigit(digit: Int) {
-        val s = _state.value
+        val s = clearHint(_state.value)
 
         // Batch pencil mark toggle for multi-selected cells
         if (s.multiSelectedCells.isNotEmpty()) {
@@ -70,10 +80,11 @@ class GameViewModel {
             for (i in editable) {
                 if (anyHas) marks[i].remove(digit) else marks[i].add(digit)
             }
-            _state.value = s.copy(
-                pencilMarks = marks,
-                pencilMarkVersion = s.pencilMarkVersion + 1
-            )
+            _state.value =
+                s.copy(
+                    pencilMarks = marks,
+                    pencilMarkVersion = s.pencilMarkVersion + 1,
+                )
             redoStack.clear()
             return
         }
@@ -86,10 +97,11 @@ class GameViewModel {
         if (s.pencilMode) {
             val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
             if (digit in marks[idx]) marks[idx].remove(digit) else marks[idx].add(digit)
-            _state.value = s.copy(
-                pencilMarks = marks,
-                pencilMarkVersion = s.pencilMarkVersion + 1
-            )
+            _state.value =
+                s.copy(
+                    pencilMarks = marks,
+                    pencilMarkVersion = s.pencilMarkVersion + 1,
+                )
         } else {
             val newValues = s.values.copyOf()
             val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
@@ -111,21 +123,22 @@ class GameViewModel {
             }
 
             val isWon = checkWin(newValues, s.solution)
-            _state.value = s.copy(
-                values = newValues,
-                pencilMarks = marks,
-                pencilMarkVersion = s.pencilMarkVersion + 1,
-                errorCount = newErrorCount,
-                isWon = isWon,
-                showWinDialog = isWon
-            )
+            _state.value =
+                s.copy(
+                    values = newValues,
+                    pencilMarks = marks,
+                    pencilMarkVersion = s.pencilMarkVersion + 1,
+                    errorCount = newErrorCount,
+                    isWon = isWon,
+                    showWinDialog = isWon,
+                )
             if (isWon) timerJob?.cancel()
         }
         redoStack.clear()
     }
 
     private fun erase() {
-        val s = _state.value
+        val s = clearHint(_state.value)
         val idx = s.selectedIndex
         if (idx < 0 || s.fixed[idx] || s.isWon) return
 
@@ -134,11 +147,12 @@ class GameViewModel {
         val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
         newValues[idx] = 0
         marks[idx].clear()
-        _state.value = s.copy(
-            values = newValues,
-            pencilMarks = marks,
-            pencilMarkVersion = s.pencilMarkVersion + 1
-        )
+        _state.value =
+            s.copy(
+                values = newValues,
+                pencilMarks = marks,
+                pencilMarkVersion = s.pencilMarkVersion + 1,
+            )
         redoStack.clear()
     }
 
@@ -154,65 +168,75 @@ class GameViewModel {
 
     private fun undo() {
         if (undoStack.isEmpty()) return
-        val s = _state.value
+        val s = clearHint(_state.value)
         // Save current state to redo
-        redoStack.add(UndoEntry(
-            values = s.values.copyOf(),
-            pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray()
-        ))
+        redoStack.add(
+            UndoEntry(
+                values = s.values.copyOf(),
+                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+            ),
+        )
         val entry = undoStack.removeLast()
         val marks = entry.pencilMarks.map { it.toMutableSet() }.toTypedArray()
-        _state.value = s.copy(
-            values = entry.values,
-            pencilMarks = marks,
-            pencilMarkVersion = s.pencilMarkVersion + 1
-        )
+        _state.value =
+            s.copy(
+                values = entry.values,
+                pencilMarks = marks,
+                pencilMarkVersion = s.pencilMarkVersion + 1,
+            )
     }
 
     private fun redo() {
         if (redoStack.isEmpty()) return
-        val s = _state.value
-        undoStack.add(UndoEntry(
-            values = s.values.copyOf(),
-            pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray()
-        ))
+        val s = clearHint(_state.value)
+        undoStack.add(
+            UndoEntry(
+                values = s.values.copyOf(),
+                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+            ),
+        )
         val entry = redoStack.removeLast()
         val marks = entry.pencilMarks.map { it.toMutableSet() }.toTypedArray()
-        _state.value = s.copy(
-            values = entry.values,
-            pencilMarks = marks,
-            pencilMarkVersion = s.pencilMarkVersion + 1
-        )
+        _state.value =
+            s.copy(
+                values = entry.values,
+                pencilMarks = marks,
+                pencilMarkVersion = s.pencilMarkVersion + 1,
+            )
     }
 
     private fun saveUndo() {
         val s = _state.value
-        undoStack.add(UndoEntry(
-            values = s.values.copyOf(),
-            pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray()
-        ))
+        undoStack.add(
+            UndoEntry(
+                values = s.values.copyOf(),
+                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+            ),
+        )
         // Limit undo stack
         if (undoStack.size > 100) undoStack.removeAt(0)
     }
 
     private fun fillAllCandidates() {
-        val s = _state.value
+        val s = clearHint(_state.value)
         if (s.isWon) return
         saveUndo()
         val marks = computeAllCandidates(s.values)
         // Preserve: don't overwrite fixed cells (they'll have emptySet anyway)
-        _state.value = s.copy(
-            pencilMarks = marks,
-            pencilMarkVersion = s.pencilMarkVersion + 1
-        )
+        _state.value =
+            s.copy(
+                pencilMarks = marks,
+                pencilMarkVersion = s.pencilMarkVersion + 1,
+            )
         redoStack.clear()
     }
 
     private fun toggleFilterDigit(digit: Int) {
         val s = _state.value
-        _state.value = s.copy(
-            filterDigit = if (s.filterDigit == digit) 0 else digit
-        )
+        _state.value =
+            s.copy(
+                filterDigit = if (s.filterDigit == digit) 0 else digit,
+            )
     }
 
     private fun toggleBivalueHighlight() {
@@ -230,7 +254,10 @@ class GameViewModel {
         _state.value = s.copy(peerHighlight = !s.peerHighlight)
     }
 
-    private fun doubleTapCell(row: Int, col: Int) {
+    private fun doubleTapCell(
+        row: Int,
+        col: Int,
+    ) {
         val s = _state.value
         val idx = row * 9 + col
         if (s.fixed[idx] || s.values[idx] != 0 || s.isWon) return
@@ -254,7 +281,11 @@ class GameViewModel {
         // No single found — do nothing
     }
 
-    private fun isHiddenSingle(values: IntArray, idx: Int, digit: Int): Boolean {
+    private fun isHiddenSingle(
+        values: IntArray,
+        idx: Int,
+        digit: Int,
+    ): Boolean {
         val row = idx / 9
         val col = idx % 9
         val blockRow = (row / 3) * 3
@@ -302,25 +333,31 @@ class GameViewModel {
         return false
     }
 
-    private fun placeDigit(s: GameState, idx: Int, digit: Int) {
+    private fun placeDigit(
+        s: GameState,
+        idx: Int,
+        digit: Int,
+    ) {
+        val cleared = clearHint(s)
         saveUndo()
-        val newValues = s.values.copyOf()
-        val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+        val newValues = cleared.values.copyOf()
+        val marks = cleared.pencilMarks.map { it.toMutableSet() }.toTypedArray()
         newValues[idx] = digit
         marks[idx].clear()
         for (peer in Board.BUDDIES_ARRAY[idx]) {
             marks[peer].remove(digit)
         }
-        val isWon = checkWin(newValues, s.solution)
-        _state.value = s.copy(
-            values = newValues,
-            pencilMarks = marks,
-            pencilMarkVersion = s.pencilMarkVersion + 1,
-            selectedRow = idx / 9,
-            selectedCol = idx % 9,
-            isWon = isWon,
-            showWinDialog = isWon
-        )
+        val isWon = checkWin(newValues, cleared.solution)
+        _state.value =
+            cleared.copy(
+                values = newValues,
+                pencilMarks = marks,
+                pencilMarkVersion = s.pencilMarkVersion + 1,
+                selectedRow = idx / 9,
+                selectedCol = idx % 9,
+                isWon = isWon,
+                showWinDialog = isWon,
+            )
         if (isWon) timerJob?.cancel()
         redoStack.clear()
     }
@@ -328,61 +365,65 @@ class GameViewModel {
     private fun newGame(difficulty: Difficulty) {
         generateJob?.cancel()
         timerJob?.cancel()
-        _state.value = _state.value.copy(
-            showNewGameDialog = false,
-            isGenerating = true,
-            isWon = false,
-            showWinDialog = false
-        )
+        _state.value =
+            _state.value.copy(
+                showNewGameDialog = false,
+                isGenerating = true,
+                isWon = false,
+                showWinDialog = false,
+            )
         undoStack.clear()
         redoStack.clear()
 
-        generateJob = scope.launch {
-            val generator = Generator()
-            val puzzle = generator.generate(difficulty)
+        generateJob =
+            scope.launch {
+                val generator = Generator()
+                val puzzle = generator.generate(difficulty)
 
-            val values = IntArray(81)
-            val fixed = BooleanArray(81)
-            for (i in puzzle.puzzle.indices) {
-                val ch = puzzle.puzzle[i]
-                if (ch in '1'..'9') {
-                    values[i] = ch - '0'
-                    fixed[i] = true
+                val values = IntArray(81)
+                val fixed = BooleanArray(81)
+                for (i in puzzle.puzzle.indices) {
+                    val ch = puzzle.puzzle[i]
+                    if (ch in '1'..'9') {
+                        values[i] = ch - '0'
+                        fixed[i] = true
+                    }
                 }
-            }
 
-            _state.value = GameState(
-                values = values,
-                fixed = fixed,
-                solution = puzzle.solution,
-                pencilMarks = Array(81) { mutableSetOf() },
-                selectedRow = -1,
-                selectedCol = -1,
-                pencilMode = false,
-                errorChecking = true,
-                difficulty = puzzle.difficulty,
-                elapsedSeconds = 0L,
-                isWon = false,
-                showNewGameDialog = false,
-                showWinDialog = false,
-                isGenerating = false,
-                errorCount = 0
-            )
-            startTimer()
-        }
+                _state.value =
+                    GameState(
+                        values = values,
+                        fixed = fixed,
+                        solution = puzzle.solution,
+                        pencilMarks = Array(81) { mutableSetOf() },
+                        selectedRow = -1,
+                        selectedCol = -1,
+                        pencilMode = false,
+                        errorChecking = true,
+                        difficulty = puzzle.difficulty,
+                        elapsedSeconds = 0L,
+                        isWon = false,
+                        showNewGameDialog = false,
+                        showWinDialog = false,
+                        isGenerating = false,
+                        errorCount = 0,
+                    )
+                startTimer()
+            }
     }
 
     private fun startTimer() {
         timerJob?.cancel()
-        timerJob = scope.launch {
-            while (isActive) {
-                delay(1000)
-                val s = _state.value
-                if (!s.isWon && !s.isGenerating) {
-                    _state.value = s.copy(elapsedSeconds = s.elapsedSeconds + 1)
+        timerJob =
+            scope.launch {
+                while (isActive) {
+                    delay(1000)
+                    val s = _state.value
+                    if (!s.isWon && !s.isGenerating) {
+                        _state.value = s.copy(elapsedSeconds = s.elapsedSeconds + 1)
+                    }
                 }
             }
-        }
     }
 
     private fun showNewGameDialog() {
@@ -397,7 +438,98 @@ class GameViewModel {
         _state.value = _state.value.copy(showWinDialog = false)
     }
 
-    private fun checkWin(values: IntArray, solution: IntArray): Boolean {
+    private fun clearHint(s: GameState): GameState =
+        if (s.hintLevel == 0) {
+            s
+        } else {
+            hintBoard = null
+            s.copy(hintLevel = 0, hintStep = null, hintHighlights = emptyList())
+        }
+
+    private fun buildSolverBoard(s: GameState): Board {
+        val board = Board()
+        for (i in 0 until 81) {
+            if (s.values[i] != 0) {
+                board.setCell(i, s.values[i], isFixed = s.fixed[i])
+            }
+        }
+        return board
+    }
+
+    private fun requestHint() {
+        val s = _state.value
+        if (s.isWon) return
+
+        when (s.hintLevel) {
+            0 -> {
+                // Vague: find next step
+                val board = buildSolverBoard(s)
+                val step = stepFinder.findNextStep(board) ?: return
+                hintBoard = board
+                _state.value =
+                    s.copy(
+                        hintLevel = 1,
+                        hintStep = step,
+                        hintHighlights = emptyList(),
+                        hintCount = s.hintCount + 1,
+                    )
+            }
+
+            1 -> {
+                // Concrete: just advance level (step already cached)
+                _state.value = s.copy(hintLevel = 2)
+            }
+
+            2 -> {
+                // Full: build highlights from cached board + step
+                val step = s.hintStep ?: return
+                val board = hintBoard ?: return
+                val highlights = buildHighlights(board, step)
+                _state.value = s.copy(hintLevel = 3, hintHighlights = highlights)
+            }
+
+            3 -> {
+                // Execute: apply the step
+                val step = s.hintStep ?: return
+                saveUndo()
+                val newValues = s.values.copyOf()
+                val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+
+                if (step.type.isSingle) {
+                    newValues[step.cellIndex] = step.value
+                    marks[step.cellIndex].clear()
+                    for (peer in Board.BUDDIES_ARRAY[step.cellIndex]) {
+                        marks[peer].remove(step.value)
+                    }
+                } else {
+                    for ((cellIndex, digit) in step.candidatesRemoved) {
+                        marks[cellIndex].remove(digit)
+                    }
+                }
+
+                hintBoard = null
+                val isWon = checkWin(newValues, s.solution)
+                _state.value =
+                    s.copy(
+                        values = newValues,
+                        pencilMarks = marks,
+                        pencilMarkVersion = s.pencilMarkVersion + 1,
+                        hintLevel = 0,
+                        hintStep = null,
+                        hintHighlights = emptyList(),
+                        isWon = isWon,
+                        showWinDialog = isWon,
+                    )
+                if (isWon) timerJob?.cancel()
+                redoStack.clear()
+            }
+        }
+    }
+
+    private fun checkWin(
+        values: IntArray,
+        solution: IntArray,
+    ): Boolean {
         if (solution.all { it == 0 }) return false
         for (i in values.indices) {
             if (values[i] == 0 || values[i] != solution[i]) return false

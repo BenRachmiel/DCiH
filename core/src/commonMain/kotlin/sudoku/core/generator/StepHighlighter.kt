@@ -23,7 +23,7 @@ fun buildBoardExample(
     )
 }
 
-private fun buildHighlights(
+fun buildHighlights(
     board: Board,
     step: SolutionStep,
 ): List<CandidateHighlight> {

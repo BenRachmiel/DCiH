@@ -1,6 +1,8 @@
 package sudoku.app.game
 
+import sudoku.core.model.CandidateHighlight
 import sudoku.core.model.Difficulty
+import sudoku.core.model.SolutionStep
 
 data class GameState(
     /** Cell values (0=empty, 1-9=set). Givens and user entries combined. */
@@ -43,35 +45,47 @@ data class GameState(
     val errorCount: Int = 0,
     /** Cells selected via click-and-drag (indices 0-80) */
     val multiSelectedCells: Set<Int> = emptySet(),
+    /** Current hint progression level (0=none, 1=vague, 2=concrete, 3=full) */
+    val hintLevel: Int = 0,
+    /** Cached solver step for the current hint */
+    val hintStep: SolutionStep? = null,
+    /** Candidate highlights for hint level 3 (full visualization) */
+    val hintHighlights: List<CandidateHighlight> = emptyList(),
+    /** Total hints used this game */
+    val hintCount: Int = 0,
 ) {
     val selectedIndex: Int get() = if (selectedRow >= 0 && selectedCol >= 0) selectedRow * 9 + selectedCol else -1
 
     fun isError(index: Int): Boolean =
         errorChecking && values[index] != 0 && !fixed[index] &&
-                solution[index] != 0 && values[index] != solution[index]
+            solution[index] != 0 && values[index] != solution[index]
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is GameState) return false
         return values.contentEquals(other.values) &&
-                fixed.contentEquals(other.fixed) &&
-                pencilMarkVersion == other.pencilMarkVersion &&
-                selectedRow == other.selectedRow &&
-                selectedCol == other.selectedCol &&
-                pencilMode == other.pencilMode &&
-                errorChecking == other.errorChecking &&
-                difficulty == other.difficulty &&
-                elapsedSeconds == other.elapsedSeconds &&
-                isWon == other.isWon &&
-                showNewGameDialog == other.showNewGameDialog &&
-                showWinDialog == other.showWinDialog &&
-                isGenerating == other.isGenerating &&
-                filterDigit == other.filterDigit &&
-                bivalueHighlight == other.bivalueHighlight &&
-                trivalueHighlight == other.trivalueHighlight &&
-                peerHighlight == other.peerHighlight &&
-                errorCount == other.errorCount &&
-                multiSelectedCells == other.multiSelectedCells
+            fixed.contentEquals(other.fixed) &&
+            pencilMarkVersion == other.pencilMarkVersion &&
+            selectedRow == other.selectedRow &&
+            selectedCol == other.selectedCol &&
+            pencilMode == other.pencilMode &&
+            errorChecking == other.errorChecking &&
+            difficulty == other.difficulty &&
+            elapsedSeconds == other.elapsedSeconds &&
+            isWon == other.isWon &&
+            showNewGameDialog == other.showNewGameDialog &&
+            showWinDialog == other.showWinDialog &&
+            isGenerating == other.isGenerating &&
+            filterDigit == other.filterDigit &&
+            bivalueHighlight == other.bivalueHighlight &&
+            trivalueHighlight == other.trivalueHighlight &&
+            peerHighlight == other.peerHighlight &&
+            errorCount == other.errorCount &&
+            multiSelectedCells == other.multiSelectedCells &&
+            hintLevel == other.hintLevel &&
+            hintStep == other.hintStep &&
+            hintHighlights == other.hintHighlights &&
+            hintCount == other.hintCount
     }
 
     override fun hashCode(): Int {
@@ -85,15 +99,17 @@ data class GameState(
         result = result * 31 + if (peerHighlight) 1 else 0
         result = result * 31 + errorCount
         result = result * 31 + multiSelectedCells.hashCode()
+        result = result * 31 + hintLevel
+        result = result * 31 + hintCount
         return result
     }
 }
 
 data class UndoEntry(
     val values: IntArray,
-    val pencilMarks: Array<Set<Int>>
+    val pencilMarks: Array<Set<Int>>,
 ) {
-    override fun equals(other: Any?): Boolean =
-        other is UndoEntry && values.contentEquals(other.values)
+    override fun equals(other: Any?): Boolean = other is UndoEntry && values.contentEquals(other.values)
+
     override fun hashCode(): Int = values.contentHashCode()
 }
