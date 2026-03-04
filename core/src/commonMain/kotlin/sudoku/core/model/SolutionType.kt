@@ -56,6 +56,7 @@ enum class SolutionType(
             when (this) {
                 FULL_HOUSE, NAKED_SINGLE, HIDDEN_SINGLE,
                 LOCKED_CANDIDATES_1, LOCKED_CANDIDATES_2,
+                LOCKED_PAIR, LOCKED_TRIPLE,
                 NAKED_PAIR, NAKED_TRIPLE, NAKED_QUADRUPLE,
                 HIDDEN_PAIR, HIDDEN_TRIPLE, HIDDEN_QUADRUPLE,
                 X_WING, SWORDFISH, JELLYFISH,

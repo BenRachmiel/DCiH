@@ -126,6 +126,50 @@ class ExampleGeneratorTest {
     }
 
     @Test
+    fun testLockedSubsetHighlights() {
+        val puzzles =
+            listOf(
+                "000000010400000000020000000000050407008000300001090000300400200050100000000806000",
+                "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
+                "003000200090000006000630040006003900050904020004100800020048000400000050005000300",
+            )
+        var result: Pair<Board, SolutionStep>? = null
+        for (puzzle in puzzles) {
+            result = findStepOfType(puzzle, SolutionType.LOCKED_PAIR)
+                ?: findStepOfType(puzzle, SolutionType.LOCKED_TRIPLE)
+            if (result != null) break
+        }
+        if (result == null) return // Skip if not found
+
+        val (board, step) = result
+        val example = buildBoardExample(board, step)
+
+        val defining = example.highlights.filter { it.role == HighlightRole.DEFINING }
+        val elimination = example.highlights.filter { it.role == HighlightRole.ELIMINATION }
+        assertTrue(defining.isNotEmpty(), "Should have DEFINING highlights")
+        assertTrue(elimination.isNotEmpty(), "Should have ELIMINATION highlights")
+
+        // All candidates in subset cells should be DEFINING
+        for (cell in step.indices) {
+            val cellCands = Board.POSSIBLE_VALUES[board.cells[cell]]
+            for (cand in cellCands) {
+                assertTrue(
+                    defining.any { it.cellIndex == cell && it.value == cand },
+                    "All candidates in locked subset cell $cell should be DEFINING",
+                )
+            }
+        }
+
+        // DEFINING and ELIMINATION should not overlap
+        val definingSet = defining.map { it.cellIndex to it.value }.toSet()
+        val eliminationSet = elimination.map { it.cellIndex to it.value }.toSet()
+        assertTrue(
+            definingSet.intersect(eliminationSet).isEmpty(),
+            "DEFINING and ELIMINATION should not overlap",
+        )
+    }
+
+    @Test
     fun testHiddenSubsetHighlights() {
         val puzzle = "000000010400000000020000000000050407008000300001090000300400200050100000000806000"
         val result =

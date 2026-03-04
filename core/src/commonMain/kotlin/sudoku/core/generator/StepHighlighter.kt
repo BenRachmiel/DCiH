@@ -8,7 +8,10 @@ import sudoku.core.model.HighlightRole.*
  * semantic highlights. Captures `board.cells` directly as `candidateMasks` —
  * exact solver-state candidates, not recomputed.
  */
-fun buildBoardExample(board: Board, step: SolutionStep): BoardExample {
+fun buildBoardExample(
+    board: Board,
+    step: SolutionStep,
+): BoardExample {
     val puzzle = board.toStringCompact()
     val candidateMasks = board.cells.copyOf()
     val highlights = buildHighlights(board, step)
@@ -20,20 +23,25 @@ fun buildBoardExample(board: Board, step: SolutionStep): BoardExample {
     )
 }
 
-private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHighlight> {
+private fun buildHighlights(
+    board: Board,
+    step: SolutionStep,
+): List<CandidateHighlight> {
     val highlights = mutableListOf<CandidateHighlight>()
 
     when (step.type) {
         // Singles: DEFINING on the placed cell + value
         SolutionType.FULL_HOUSE,
         SolutionType.NAKED_SINGLE,
-        SolutionType.HIDDEN_SINGLE -> {
+        SolutionType.HIDDEN_SINGLE,
+        -> {
             highlights.add(CandidateHighlight(step.cellIndex, step.value, DEFINING))
         }
 
         // Locked Candidates: DEFINING on trigger cells, ELIMINATION on removed
         SolutionType.LOCKED_CANDIDATES_1,
-        SolutionType.LOCKED_CANDIDATES_2 -> {
+        SolutionType.LOCKED_CANDIDATES_2,
+        -> {
             for (cell in step.indices) {
                 highlights.add(CandidateHighlight(cell, step.value, DEFINING))
             }
@@ -42,11 +50,14 @@ private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHig
             }
         }
 
-        // Locked Pair/Triple: same as locked candidates
+        // Locked Pair/Triple: all candidates in subset cells are DEFINING
         SolutionType.LOCKED_PAIR,
-        SolutionType.LOCKED_TRIPLE -> {
+        SolutionType.LOCKED_TRIPLE,
+        -> {
             for (cell in step.indices) {
-                highlights.add(CandidateHighlight(cell, step.value, DEFINING))
+                for (digit in Board.POSSIBLE_VALUES[board.cells[cell]]) {
+                    highlights.add(CandidateHighlight(cell, digit, DEFINING))
+                }
             }
             for ((cell, digit) in step.candidatesRemoved) {
                 highlights.add(CandidateHighlight(cell, digit, ELIMINATION))
@@ -56,7 +67,8 @@ private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHig
         // Naked Subsets: all candidates in subset cells are DEFINING
         SolutionType.NAKED_PAIR,
         SolutionType.NAKED_TRIPLE,
-        SolutionType.NAKED_QUADRUPLE -> {
+        SolutionType.NAKED_QUADRUPLE,
+        -> {
             for (cell in step.indices) {
                 for (digit in Board.POSSIBLE_VALUES[board.cells[cell]]) {
                     highlights.add(CandidateHighlight(cell, digit, DEFINING))
@@ -70,7 +82,8 @@ private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHig
         // Hidden Subsets: hidden digits DEFINING, removed digits ELIMINATION
         SolutionType.HIDDEN_PAIR,
         SolutionType.HIDDEN_TRIPLE,
-        SolutionType.HIDDEN_QUADRUPLE -> {
+        SolutionType.HIDDEN_QUADRUPLE,
+        -> {
             val removedSet = step.candidatesRemoved.toSet()
             for (cell in step.indices) {
                 for (digit in Board.POSSIBLE_VALUES[board.cells[cell]]) {
@@ -87,7 +100,8 @@ private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHig
         // Fish: DEFINING on fish cells with the digit, ELIMINATION on removed
         SolutionType.X_WING,
         SolutionType.SWORDFISH,
-        SolutionType.JELLYFISH -> {
+        SolutionType.JELLYFISH,
+        -> {
             for (cell in step.indices) {
                 highlights.add(CandidateHighlight(cell, step.value, DEFINING))
             }
@@ -194,7 +208,11 @@ private fun buildHighlights(board: Board, step: SolutionStep): List<CandidateHig
  *
  * @return Pair of (colorA cells, colorB cells)
  */
-fun recolorChain(board: Board, coloredCells: List<Int>, digit: Int): Pair<List<Int>, List<Int>> {
+fun recolorChain(
+    board: Board,
+    coloredCells: List<Int>,
+    digit: Int,
+): Pair<List<Int>, List<Int>> {
     val cellSet = coloredCells.toSet()
     val colorA = mutableListOf<Int>()
     val colorB = mutableListOf<Int>()

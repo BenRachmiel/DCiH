@@ -1,12 +1,12 @@
 package sudoku.core
 
 import sudoku.core.model.*
-import sudoku.core.solver.Solver
 import sudoku.core.solver.SimpleSolver
+import sudoku.core.solver.Solver
+import sudoku.core.solver.StepFinder
 import kotlin.test.*
 
 class SolverTest {
-
     @Test
     fun testSolveEasyPuzzle() {
         // This puzzle is solvable with singles only
@@ -22,9 +22,9 @@ class SolverTest {
         for (step in result.steps) {
             assertTrue(
                 step.type == SolutionType.FULL_HOUSE ||
-                step.type == SolutionType.NAKED_SINGLE ||
-                step.type == SolutionType.HIDDEN_SINGLE,
-                "Easy puzzle should only use singles, got: ${step.type}"
+                    step.type == SolutionType.NAKED_SINGLE ||
+                    step.type == SolutionType.HIDDEN_SINGLE,
+                "Easy puzzle should only use singles, got: ${step.type}",
             )
         }
     }
@@ -107,7 +107,7 @@ class SolverTest {
         for (type in SolutionType.entries) {
             assertTrue(
                 type.difficulty >= Difficulty.EASY,
-                "${type.name} difficulty should be at least EASY"
+                "${type.name} difficulty should be at least EASY",
             )
         }
     }
@@ -168,5 +168,99 @@ class SolverTest {
             val gatedResult = solver.solve(board, maxDifficulty = Difficulty.EASY)
             assertFalse(gatedResult.solved, "Should not solve with EASY gate when advanced techniques are needed")
         }
+    }
+
+    // ── Locked Subset Tests ──────────────────────────────────────────────────
+
+    private fun findStepOfType(
+        puzzleString: String,
+        targetType: SolutionType,
+    ): Pair<Board, SolutionStep>? {
+        val stepFinder = StepFinder()
+        val board = Board()
+        board.loadFromString(puzzleString)
+
+        while (!board.isSolved) {
+            val step = stepFinder.findNextStep(board) ?: break
+            if (step.type == targetType) return board to step
+
+            if (step.type.isSingle || step.type == SolutionType.BRUTE_FORCE) {
+                board.setCell(step.cellIndex, step.value)
+                board.setAllExposedSingles()
+            } else {
+                for ((cellIndex, candidate) in step.candidatesRemoved) {
+                    board.setCandidate(cellIndex, candidate, false)
+                }
+                board.setAllExposedSingles()
+            }
+        }
+        return null
+    }
+
+    @Test
+    fun testSolverFindsLockedPair() {
+        val puzzles =
+            listOf(
+                "000000010400000000020000000000050407008000300001090000300400200050100000000806000",
+                "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
+                "003000200090000006000630040006003900050904020004100800020048000400000050005000300",
+            )
+        var found: Pair<Board, SolutionStep>? = null
+        for (puzzle in puzzles) {
+            found = findStepOfType(puzzle, SolutionType.LOCKED_PAIR)
+            if (found != null) break
+        }
+        if (found == null) return // Skip if no locked pair found in curated puzzles
+
+        val (board, step) = found
+        assertEquals(SolutionType.LOCKED_PAIR, step.type)
+        assertEquals(2, step.indices.size, "Locked pair should have 2 cells")
+        assertTrue(step.candidatesRemoved.isNotEmpty(), "Should have eliminations")
+
+        // Verify all subset cells share the same block and line
+        val blocks = step.indices.map { Board.getBlock(it) }.toSet()
+        assertEquals(1, blocks.size, "All cells must be in the same block")
+        val rows = step.indices.map { it / 9 }.toSet()
+        val cols = step.indices.map { it % 9 }.toSet()
+        assertTrue(rows.size == 1 || cols.size == 1, "All cells must be in the same row or col")
+
+        // Combined candidates should be exactly 2
+        var combinedMask = 0
+        for (cell in step.indices) combinedMask = combinedMask or board.cells[cell]
+        assertEquals(2, Board.ANZ_VALUES[combinedMask], "Combined candidates should be exactly 2")
+    }
+
+    @Test
+    fun testSolverFindsLockedTriple() {
+        val puzzles =
+            listOf(
+                "000000010400000000020000000000050407008000300001090000300400200050100000000806000",
+                "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
+                "003000200090000006000630040006003900050904020004100800020048000400000050005000300",
+            )
+        var found: Pair<Board, SolutionStep>? = null
+        for (puzzle in puzzles) {
+            found = findStepOfType(puzzle, SolutionType.LOCKED_TRIPLE)
+            if (found != null) break
+        }
+        if (found == null) return // Skip if not found in curated puzzles
+
+        val (board, step) = found
+        assertEquals(SolutionType.LOCKED_TRIPLE, step.type)
+        assertEquals(3, step.indices.size, "Locked triple should have 3 cells")
+        assertTrue(step.candidatesRemoved.isNotEmpty(), "Should have eliminations")
+
+        val blocks = step.indices.map { Board.getBlock(it) }.toSet()
+        assertEquals(1, blocks.size, "All cells must be in the same block")
+
+        var combinedMask = 0
+        for (cell in step.indices) combinedMask = combinedMask or board.cells[cell]
+        assertEquals(3, Board.ANZ_VALUES[combinedMask], "Combined candidates should be exactly 3")
+    }
+
+    @Test
+    fun testLockedPairHasSolver() {
+        assertTrue(SolutionType.LOCKED_PAIR.hasSolver, "LOCKED_PAIR should have solver")
+        assertTrue(SolutionType.LOCKED_TRIPLE.hasSolver, "LOCKED_TRIPLE should have solver")
     }
 }

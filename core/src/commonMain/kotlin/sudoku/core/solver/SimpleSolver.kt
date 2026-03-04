@@ -6,15 +6,16 @@ import sudoku.core.model.*
  * Handles singles, locked candidates, and naked/hidden pairs/triples/quads.
  */
 class SimpleSolver : AbstractSolver() {
-
     override fun findSteps(board: Board): List<SolutionStep> {
         // Try techniques in order of difficulty
         findFullHouse(board)?.let { return listOf(it) }
         findNakedSingle(board)?.let { return listOf(it) }
         findHiddenSingle(board)?.let { return listOf(it) }
         findLockedCandidates(board)?.let { return listOf(it) }
+        findLockedSubset(board, 2)?.let { return listOf(it) }
         findNakedSubset(board, 2)?.let { return listOf(it) }
         findHiddenSubset(board, 2)?.let { return listOf(it) }
+        findLockedSubset(board, 3)?.let { return listOf(it) }
         findNakedSubset(board, 3)?.let { return listOf(it) }
         findHiddenSubset(board, 3)?.let { return listOf(it) }
         findNakedSubset(board, 4)?.let { return listOf(it) }
@@ -38,11 +39,16 @@ class SimpleSolver : AbstractSolver() {
                 }
             }
             if (emptyCount == 1) {
-                for (d in 1..9) if (digitMask[d] == 0) { missingDigit = d; break }
+                for (d in 1..9) {
+                    if (digitMask[d] == 0) {
+                        missingDigit = d
+                        break
+                    }
+                }
                 return SolutionStep(
                     type = SolutionType.FULL_HOUSE,
                     cellIndex = emptyIndex,
-                    value = missingDigit
+                    value = missingDigit,
                 )
             }
         }
@@ -57,7 +63,7 @@ class SimpleSolver : AbstractSolver() {
                 return SolutionStep(
                     type = SolutionType.NAKED_SINGLE,
                     cellIndex = i,
-                    value = value
+                    value = value,
                 )
             }
         }
@@ -81,7 +87,7 @@ class SimpleSolver : AbstractSolver() {
                     return SolutionStep(
                         type = SolutionType.HIDDEN_SINGLE,
                         cellIndex = lastIndex,
-                        value = digit
+                        value = digit,
                     )
                 }
             }
@@ -119,7 +125,7 @@ class SimpleSolver : AbstractSolver() {
                             type = SolutionType.LOCKED_CANDIDATES_1,
                             indices = positions,
                             value = digit,
-                            candidatesRemoved = eliminations
+                            candidatesRemoved = eliminations,
                         )
                     }
                 }
@@ -137,7 +143,7 @@ class SimpleSolver : AbstractSolver() {
                             type = SolutionType.LOCKED_CANDIDATES_1,
                             indices = positions,
                             value = digit,
-                            candidatesRemoved = eliminations
+                            candidatesRemoved = eliminations,
                         )
                     }
                 }
@@ -168,7 +174,7 @@ class SimpleSolver : AbstractSolver() {
                                 type = SolutionType.LOCKED_CANDIDATES_2,
                                 indices = positions,
                                 value = digit,
-                                candidatesRemoved = eliminations
+                                candidatesRemoved = eliminations,
                             )
                         }
                     }
@@ -178,13 +184,119 @@ class SimpleSolver : AbstractSolver() {
         return null
     }
 
-    /** Naked Pair/Triple/Quad: N cells in a unit with exactly N candidates combined */
-    private fun findNakedSubset(board: Board, size: Int): SolutionStep? {
-        val type = when (size) {
-            2 -> SolutionType.NAKED_PAIR
-            3 -> SolutionType.NAKED_TRIPLE
-            else -> SolutionType.NAKED_QUADRUPLE
+    /**
+     * Locked Pair/Triple: a naked subset where all cells lie at the intersection
+     * of a box and a line. Eliminations apply to both the rest of the box AND
+     * the rest of the line.
+     */
+    private fun findLockedSubset(
+        board: Board,
+        size: Int,
+    ): SolutionStep? {
+        val type = if (size == 2) SolutionType.LOCKED_PAIR else SolutionType.LOCKED_TRIPLE
+
+        for (block in 0 until 9) {
+            val br = block / 3 * 3
+            val bc = block % 3 * 3
+            // 6 intersecting lines: 3 rows + 3 cols
+            for (lineIdx in 0 until 6) {
+                val line: IntArray
+                val intersection: IntArray
+                if (lineIdx < 3) {
+                    val row = br + lineIdx
+                    line = Board.ROWS[row]
+                    intersection = intArrayOf(row * 9 + bc, row * 9 + bc + 1, row * 9 + bc + 2)
+                } else {
+                    val col = bc + (lineIdx - 3)
+                    line = Board.COLS[col]
+                    intersection = intArrayOf(br * 9 + col, (br + 1) * 9 + col, (br + 2) * 9 + col)
+                }
+
+                // Unsolved cells in the intersection
+                val unsolved = mutableListOf<Int>()
+                for (cell in intersection) {
+                    if (board.cells[cell] != 0) unsolved.add(cell)
+                }
+                if (unsolved.size < size) continue
+
+                // Try all combinations of `size` unsolved cells
+                val combos = combinations(unsolved, size)
+                for (combo in combos) {
+                    var combinedMask = 0
+                    for (cell in combo) combinedMask = combinedMask or board.cells[cell]
+                    if (Board.ANZ_VALUES[combinedMask] != size) continue
+
+                    // Collect eliminations from rest of block AND rest of line
+                    val eliminations = mutableSetOf<Pair<Int, Int>>()
+                    val comboSet = combo.toSet()
+                    for (cell in Board.BLOCKS[block]) {
+                        if (cell !in comboSet && board.cells[cell] != 0) {
+                            for (digit in Board.POSSIBLE_VALUES[combinedMask]) {
+                                if (board.isCandidate(cell, digit)) {
+                                    eliminations.add(cell to digit)
+                                }
+                            }
+                        }
+                    }
+                    for (cell in line) {
+                        if (cell !in comboSet && board.cells[cell] != 0) {
+                            for (digit in Board.POSSIBLE_VALUES[combinedMask]) {
+                                if (board.isCandidate(cell, digit)) {
+                                    eliminations.add(cell to digit)
+                                }
+                            }
+                        }
+                    }
+
+                    if (eliminations.isNotEmpty()) {
+                        return SolutionStep(
+                            type = type,
+                            indices = combo,
+                            candidatesRemoved = eliminations.toList(),
+                        )
+                    }
+                }
+            }
         }
+        return null
+    }
+
+    /** Generate all combinations of [size] elements from [items]. */
+    private fun combinations(
+        items: List<Int>,
+        size: Int,
+    ): List<List<Int>> {
+        if (size == 0) return listOf(emptyList())
+        if (items.size < size) return emptyList()
+        val result = mutableListOf<List<Int>>()
+
+        fun recurse(
+            start: Int,
+            current: List<Int>,
+        ) {
+            if (current.size == size) {
+                result.add(current)
+                return
+            }
+            for (i in start until items.size) {
+                recurse(i + 1, current + items[i])
+            }
+        }
+        recurse(0, emptyList())
+        return result
+    }
+
+    /** Naked Pair/Triple/Quad: N cells in a unit with exactly N candidates combined */
+    private fun findNakedSubset(
+        board: Board,
+        size: Int,
+    ): SolutionStep? {
+        val type =
+            when (size) {
+                2 -> SolutionType.NAKED_PAIR
+                3 -> SolutionType.NAKED_TRIPLE
+                else -> SolutionType.NAKED_QUADRUPLE
+            }
 
         for (unit in Board.ALL_UNITS) {
             // Get unsolved cells in this unit
@@ -216,7 +328,7 @@ class SimpleSolver : AbstractSolver() {
                     return SolutionStep(
                         type = type,
                         indices = combo.toList(),
-                        candidatesRemoved = eliminations
+                        candidatesRemoved = eliminations,
                     )
                 }
             }
@@ -225,8 +337,14 @@ class SimpleSolver : AbstractSolver() {
     }
 
     private fun findNakedSubsetCombo(
-        board: Board, unsolved: List<Int>, combo: IntArray,
-        start: Int, depth: Int, size: Int, unit: IntArray, type: SolutionType
+        board: Board,
+        unsolved: List<Int>,
+        combo: IntArray,
+        start: Int,
+        depth: Int,
+        size: Int,
+        unit: IntArray,
+        type: SolutionType,
     ): Boolean {
         if (depth == size) {
             var combinedMask = 0
@@ -252,12 +370,16 @@ class SimpleSolver : AbstractSolver() {
     }
 
     /** Hidden Pair/Triple/Quad: N candidates in a unit confined to N cells */
-    private fun findHiddenSubset(board: Board, size: Int): SolutionStep? {
-        val type = when (size) {
-            2 -> SolutionType.HIDDEN_PAIR
-            3 -> SolutionType.HIDDEN_TRIPLE
-            else -> SolutionType.HIDDEN_QUADRUPLE
-        }
+    private fun findHiddenSubset(
+        board: Board,
+        size: Int,
+    ): SolutionStep? {
+        val type =
+            when (size) {
+                2 -> SolutionType.HIDDEN_PAIR
+                3 -> SolutionType.HIDDEN_TRIPLE
+                else -> SolutionType.HIDDEN_QUADRUPLE
+            }
 
         for (unit in Board.ALL_UNITS) {
             // Find which digits still need placing
@@ -295,7 +417,7 @@ class SimpleSolver : AbstractSolver() {
                     return SolutionStep(
                         type = type,
                         indices = cellsInSubset,
-                        candidatesRemoved = eliminations
+                        candidatesRemoved = eliminations,
                     )
                 }
             }
@@ -304,8 +426,14 @@ class SimpleSolver : AbstractSolver() {
     }
 
     private fun findHiddenSubsetCombo(
-        board: Board, digits: List<Int>, combo: IntArray,
-        start: Int, depth: Int, size: Int, unit: IntArray, type: SolutionType
+        board: Board,
+        digits: List<Int>,
+        combo: IntArray,
+        start: Int,
+        depth: Int,
+        size: Int,
+        unit: IntArray,
+        type: SolutionType,
     ): Boolean {
         if (depth == size) {
             // Check: these digits must all appear in exactly 'size' cells
