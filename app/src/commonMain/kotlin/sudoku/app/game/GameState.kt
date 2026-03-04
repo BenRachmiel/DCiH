@@ -53,6 +53,8 @@ data class GameState(
     val hintHighlights: List<CandidateHighlight> = emptyList(),
     /** Total hints used this game */
     val hintCount: Int = 0,
+    /** Override hint label for pencil mark errors (null = use step descriptions) */
+    val hintMessage: String? = null,
 ) {
     val selectedIndex: Int get() = if (selectedRow >= 0 && selectedCol >= 0) selectedRow * 9 + selectedCol else -1
 
@@ -85,7 +87,8 @@ data class GameState(
             hintLevel == other.hintLevel &&
             hintStep == other.hintStep &&
             hintHighlights == other.hintHighlights &&
-            hintCount == other.hintCount
+            hintCount == other.hintCount &&
+            hintMessage == other.hintMessage
     }
 
     override fun hashCode(): Int {

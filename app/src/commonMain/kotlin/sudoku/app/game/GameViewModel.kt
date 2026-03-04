@@ -8,11 +8,15 @@ import kotlinx.coroutines.flow.update
 import sudoku.core.generator.Generator
 import sudoku.core.generator.buildHighlights
 import sudoku.core.model.Board
+import sudoku.core.model.CandidateHighlight
 import sudoku.core.model.Difficulty
+import sudoku.core.model.HighlightRole
 import sudoku.core.solver.StepFinder
 
-class GameViewModel {
-    private val _state = MutableStateFlow(GameState(showNewGameDialog = true))
+class GameViewModel(
+    initialState: GameState = GameState(showNewGameDialog = true),
+) {
+    private val _state = MutableStateFlow(initialState)
     val state: StateFlow<GameState> = _state.asStateFlow()
 
     private val undoStack = mutableListOf<UndoEntry>()
@@ -25,6 +29,9 @@ class GameViewModel {
 
     /** Cached solver board for building highlights at hint level 3. */
     private var hintBoard: Board? = null
+
+    /** Cached pencil mark errors for hint flow (transient, not in GameState). */
+    private var pencilMarkErrors: PencilMarkErrors? = null
 
     fun onAction(action: GameAction) {
         when (action) {
@@ -263,7 +270,7 @@ class GameViewModel {
         val idx = row * 9 + col
         if (s.fixed[idx] || s.values[idx] != 0 || s.isWon) return
 
-        val candidates = computeCandidates(s.values, idx)
+        val candidates = effectiveCandidates(s.values, s.pencilMarks, idx)
         if (candidates.isEmpty()) return
 
         // Naked single: only one candidate
@@ -274,7 +281,7 @@ class GameViewModel {
 
         // Hidden single: check if any candidate is unique in row, col, or block
         for (digit in candidates) {
-            if (isHiddenSingle(s.values, idx, digit)) {
+            if (isHiddenSingle(s.values, s.pencilMarks, idx, digit)) {
                 placeDigit(s, idx, digit)
                 return
             }
@@ -284,6 +291,7 @@ class GameViewModel {
 
     private fun isHiddenSingle(
         values: IntArray,
+        pencilMarks: Array<out Set<Int>>,
         idx: Int,
         digit: Int,
     ): Boolean {
@@ -297,7 +305,7 @@ class GameViewModel {
         for (c in 0 until 9) {
             val peer = row * 9 + c
             if (peer == idx) continue
-            if (values[peer] == 0 && digit in computeCandidates(values, peer)) {
+            if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
                 uniqueInRow = false
                 break
             }
@@ -309,7 +317,7 @@ class GameViewModel {
         for (r in 0 until 9) {
             val peer = r * 9 + col
             if (peer == idx) continue
-            if (values[peer] == 0 && digit in computeCandidates(values, peer)) {
+            if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
                 uniqueInCol = false
                 break
             }
@@ -322,7 +330,7 @@ class GameViewModel {
             for (c in blockCol until blockCol + 3) {
                 val peer = r * 9 + c
                 if (peer == idx) continue
-                if (values[peer] == 0 && digit in computeCandidates(values, peer)) {
+                if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
                     uniqueInBlock = false
                     break
                 }
@@ -443,11 +451,12 @@ class GameViewModel {
     }
 
     private fun clearHint(s: GameState): GameState =
-        if (s.hintLevel == 0) {
+        if (s.hintLevel == 0 && s.hintMessage == null) {
             s
         } else {
             hintBoard = null
-            s.copy(hintLevel = 0, hintStep = null, hintHighlights = emptyList())
+            pencilMarkErrors = null
+            s.copy(hintLevel = 0, hintStep = null, hintHighlights = emptyList(), hintMessage = null)
         }
 
     private fun buildSolverBoard(s: GameState): Board {
@@ -457,6 +466,16 @@ class GameViewModel {
                 board.setCell(i, s.values[i], isFixed = s.fixed[i])
             }
         }
+        // Restrict board candidates to match user pencil marks
+        for (i in 0 until 81) {
+            if (s.values[i] == 0 && s.pencilMarks[i].isNotEmpty()) {
+                for (d in 1..9) {
+                    if (board.isCandidate(i, d) && d !in s.pencilMarks[i]) {
+                        board.setCandidate(i, d, false)
+                    }
+                }
+            }
+        }
         return board
     }
 
@@ -464,8 +483,27 @@ class GameViewModel {
         val s = _state.value
         if (s.isWon) return
 
+        // Pencil mark error hint flow (hintStep is null, hintMessage is set)
+        if (s.hintMessage != null) {
+            requestPencilMarkHint(s)
+            return
+        }
+
         when (s.hintLevel) {
             0 -> {
+                // Check for pencil mark errors first
+                val errors = findPencilMarkErrors(s)
+                if (errors != null) {
+                    pencilMarkErrors = errors
+                    _state.value =
+                        s.copy(
+                            hintLevel = 1,
+                            hintMessage = "Your pencil marks have errors",
+                            hintCount = s.hintCount + 1,
+                        )
+                    return
+                }
+
                 // Vague: find next step
                 val board = buildSolverBoard(s)
                 val step = stepFinder.findNextStep(board) ?: return
@@ -507,6 +545,9 @@ class GameViewModel {
                     }
                 } else {
                     for ((cellIndex, digit) in step.candidatesRemoved) {
+                        if (marks[cellIndex].isEmpty()) {
+                            marks[cellIndex].addAll(computeCandidates(newValues, cellIndex))
+                        }
                         marks[cellIndex].remove(digit)
                     }
                 }
@@ -521,10 +562,60 @@ class GameViewModel {
                         hintLevel = 0,
                         hintStep = null,
                         hintHighlights = emptyList(),
+                        hintMessage = null,
                         isWon = isWon,
                         showWinDialog = isWon,
                     )
                 if (isWon) timerJob?.cancel()
+                redoStack.clear()
+            }
+        }
+    }
+
+    private fun requestPencilMarkHint(s: GameState) {
+        val errors = pencilMarkErrors ?: return
+
+        when (s.hintLevel) {
+            1 -> {
+                // Concrete: show counts
+                val parts = mutableListOf<String>()
+                if (errors.toRemove.isNotEmpty()) parts.add("${errors.toRemove.size} impossible")
+                if (errors.toAdd.isNotEmpty()) parts.add("${errors.toAdd.size} missing")
+                _state.value = s.copy(hintLevel = 2, hintMessage = parts.joinToString(", "))
+            }
+
+            2 -> {
+                // Full: build highlights from error lists
+                val highlights = mutableListOf<CandidateHighlight>()
+                for ((cell, digit) in errors.toRemove) {
+                    highlights.add(CandidateHighlight(cell, digit, HighlightRole.ELIMINATION))
+                }
+                for ((cell, digit) in errors.toAdd) {
+                    highlights.add(CandidateHighlight(cell, digit, HighlightRole.DEFINING))
+                }
+                _state.value = s.copy(hintLevel = 3, hintHighlights = highlights)
+            }
+
+            3 -> {
+                // Execute: fix all pencil mark errors
+                saveUndo()
+                val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+                for ((cell, digit) in errors.toRemove) {
+                    marks[cell].remove(digit)
+                }
+                for ((cell, digit) in errors.toAdd) {
+                    marks[cell].add(digit)
+                }
+                pencilMarkErrors = null
+                _state.value =
+                    s.copy(
+                        pencilMarks = marks,
+                        pencilMarkVersion = s.pencilMarkVersion + 1,
+                        hintLevel = 0,
+                        hintStep = null,
+                        hintHighlights = emptyList(),
+                        hintMessage = null,
+                    )
                 redoStack.clear()
             }
         }

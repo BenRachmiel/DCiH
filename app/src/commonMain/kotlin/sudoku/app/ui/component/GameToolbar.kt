@@ -46,8 +46,8 @@ fun GameToolbar(
         // Hint button — label changes with hint level
         val hintLabel =
             when (state.hintLevel) {
-                1 -> state.hintStep?.describeVague() ?: "Hint"
-                2 -> state.hintStep?.describeConcrete() ?: "Hint"
+                1 -> state.hintMessage ?: state.hintStep?.describeVague() ?: "Hint"
+                2 -> state.hintMessage ?: state.hintStep?.describeConcrete() ?: "Hint"
                 3 -> "Showing"
                 else -> "Hint"
             }
