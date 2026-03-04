@@ -1,11 +1,11 @@
 package sudoku.core
 
+import kotlinx.coroutines.test.runTest
 import sudoku.core.generator.Generator
 import sudoku.core.model.*
 import kotlin.test.*
 
 class GeneratorTest {
-
     @Test
     fun testCountSolutions_validPuzzle() {
         // A well-known valid puzzle with unique solution
@@ -42,4 +42,26 @@ class GeneratorTest {
         assertTrue(result.solved, "Should be able to solve")
         assertTrue(result.score > 0, "Score should be positive")
     }
+
+    @Test
+    fun testGenerateMediumNeverReturnsEasy() =
+        runTest {
+            val gen = Generator()
+            repeat(5) {
+                val puzzle = gen.generate(Difficulty.MEDIUM)
+                assertNotEquals(
+                    Difficulty.EASY,
+                    puzzle.difficulty,
+                    "Requesting MEDIUM should never return EASY (score=${puzzle.score})",
+                )
+            }
+        }
+
+    @Test
+    fun testGenerateReturnRequestedDifficulty() =
+        runTest {
+            val gen = Generator()
+            val puzzle = gen.generate(Difficulty.EASY)
+            assertEquals(Difficulty.EASY, puzzle.difficulty, "Requesting EASY should return EASY")
+        }
 }

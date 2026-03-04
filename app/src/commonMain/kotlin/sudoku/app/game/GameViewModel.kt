@@ -4,6 +4,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import sudoku.core.generator.Generator
 import sudoku.core.generator.buildHighlights
 import sudoku.core.model.Board
@@ -418,9 +419,12 @@ class GameViewModel {
             scope.launch {
                 while (isActive) {
                     delay(1000)
-                    val s = _state.value
-                    if (!s.isWon && !s.isGenerating) {
-                        _state.value = s.copy(elapsedSeconds = s.elapsedSeconds + 1)
+                    _state.update { s ->
+                        if (!s.isWon && !s.isGenerating) {
+                            s.copy(elapsedSeconds = s.elapsedSeconds + 1)
+                        } else {
+                            s
+                        }
                     }
                 }
             }

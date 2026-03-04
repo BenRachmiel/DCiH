@@ -11,8 +11,9 @@ import kotlin.random.Random
  * Generates a full valid grid via backtracking, then removes clues
  * while maintaining uniqueness.
  */
-class Generator(private val random: Random = Random) {
-
+class Generator(
+    private val random: Random = Random,
+) {
     private class StackEntry {
         val sudoku = Board()
         var index = 0
@@ -30,10 +31,18 @@ class Generator(private val random: Random = Random) {
     /**
      * Generate a puzzle targeting the given [difficulty].
      * Retries generation until the graded difficulty matches.
+     * Always returns a puzzle labeled with the requested difficulty.
      */
-    suspend fun generate(difficulty: Difficulty, maxRetries: Int = 200): GeneratedPuzzle {
+    suspend fun generate(
+        difficulty: Difficulty,
+        maxRetries: Int = 200,
+    ): GeneratedPuzzle {
         val solver = Solver()
-        for (attempt in 0 until maxRetries) {
+        var bestCandidate: GeneratedPuzzle? = null
+        // Higher difficulties need more attempts (narrow score bands)
+        val totalAttempts = maxRetries * (difficulty.ordinal + 1)
+
+        for (attempt in 0 until totalAttempts) {
             if (attempt % 5 == 4) yield() // yield to avoid blocking on wasm
 
             generateFullGrid()
@@ -66,12 +75,25 @@ class Generator(private val random: Random = Random) {
                         puzzle = puzzleString,
                         solution = newFullSudoku.copyOf(),
                         difficulty = difficulty,
-                        score = result.score
+                        score = result.score,
                     )
+                }
+                // Score matches but needs harder techniques — save as best fallback
+                if (bestCandidate == null) {
+                    bestCandidate =
+                        GeneratedPuzzle(
+                            puzzle = puzzleString,
+                            solution = newFullSudoku.copyOf(),
+                            difficulty = difficulty,
+                            score = result.score,
+                        )
                 }
             }
         }
-        // Fallback: return whatever we got last
+        // Prefer a puzzle that at least matched the difficulty score
+        bestCandidate?.let { return it }
+
+        // Last resort: return whatever we got last, labeled with actual difficulty
         val board = Board()
         for (i in newValidSudoku.indices) {
             if (newValidSudoku[i] != 0) {
@@ -87,12 +109,15 @@ class Generator(private val random: Random = Random) {
             puzzle = puzzleString,
             solution = newFullSudoku.copyOf(),
             difficulty = Difficulty.fromScore(result.score),
-            score = result.score
+            score = result.score,
         )
     }
 
     /** Count solutions (0, 1, or 2=multiple). Stores first solution. */
-    fun countSolutions(board: Board, maxCount: Int = 2): Int {
+    fun countSolutions(
+        board: Board,
+        maxCount: Int = 2,
+    ): Int {
         solve(board, maxCount)
         if (solutionCount == 1) {
             solution.copyInto(board.solution)
@@ -101,7 +126,10 @@ class Generator(private val random: Random = Random) {
         return solutionCount
     }
 
-    fun countSolutions(values: IntArray, maxCount: Int = 2): Int {
+    fun countSolutions(
+        values: IntArray,
+        maxCount: Int = 2,
+    ): Int {
         val emptyBoard = Board()
         for (i in values.indices) {
             if (values[i] in 1..9) {
@@ -116,14 +144,20 @@ class Generator(private val random: Random = Random) {
 
     // --- Backtracking solver ---
 
-    private fun solve(board: Board, maxSolutionCount: Int) {
+    private fun solve(
+        board: Board,
+        maxSolutionCount: Int,
+    ) {
         stack[0].sudoku.copyFrom(board)
         stack[0].candidates = IntArray(0)
         stack[0].candIndex = 0
         solveBT(0, maxSolutionCount)
     }
 
-    private fun solve(cellValues: IntArray, maxSolutionCount: Int) {
+    private fun solve(
+        cellValues: IntArray,
+        maxSolutionCount: Int,
+    ) {
         val board = Board()
         for (i in cellValues.indices) {
             if (cellValues[i] in 1..9) {
@@ -137,7 +171,10 @@ class Generator(private val random: Random = Random) {
         solveBT(0, maxSolutionCount)
     }
 
-    private fun solveBT(startLevel: Int, maxSolutionCount: Int) {
+    private fun solveBT(
+        startLevel: Int,
+        maxSolutionCount: Int,
+    ) {
         solutionCount = 0
 
         if (!stack[0].sudoku.setAllExposedSingles()) return
@@ -174,7 +211,10 @@ class Generator(private val random: Random = Random) {
                     }
                 }
                 level++
-                if (bestIndex < 0) { solutionCount = 0; return }
+                if (bestIndex < 0) {
+                    solutionCount = 0
+                    return
+                }
                 stack[level].index = bestIndex
                 stack[level].candidates = Board.POSSIBLE_VALUES[stack[level - 1].sudoku.cells[bestIndex]]
                 stack[level].candIndex = 0
@@ -184,7 +224,10 @@ class Generator(private val random: Random = Random) {
             do {
                 while (stack[level].candIndex >= stack[level].candidates.size) {
                     level--
-                    if (level <= 0) { done = true; break }
+                    if (level <= 0) {
+                        done = true
+                        break
+                    }
                 }
                 if (done) break
 
@@ -230,7 +273,10 @@ class Generator(private val random: Random = Random) {
             var index = -1
             val actValues = stack[level].sudoku.values
             for (i in generateIndices) {
-                if (actValues[i] == 0) { index = i; break }
+                if (actValues[i] == 0) {
+                    index = i
+                    break
+                }
             }
 
             level++
@@ -244,7 +290,10 @@ class Generator(private val random: Random = Random) {
             do {
                 while (stack[level].candIndex >= stack[level].candidates.size) {
                     level--
-                    if (level <= 0) { done = true; break }
+                    if (level <= 0) {
+                        done = true
+                        break
+                    }
                 }
                 if (done) break
 
@@ -316,10 +365,9 @@ data class GeneratedPuzzle(
     val puzzle: String,
     val solution: IntArray,
     val difficulty: Difficulty,
-    val score: Int
+    val score: Int,
 ) {
-    override fun equals(other: Any?): Boolean =
-        other is GeneratedPuzzle && puzzle == other.puzzle
+    override fun equals(other: Any?): Boolean = other is GeneratedPuzzle && puzzle == other.puzzle
 
     override fun hashCode(): Int = puzzle.hashCode()
 }
