@@ -6,6 +6,7 @@ import sudoku.core.generator.Generator
 import sudoku.core.model.*
 import java.io.File
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 /**
@@ -50,6 +51,7 @@ class GenerateExamplesTask {
             "000000000100203004003010560006000100050000030004000800091080700700309002000000000",
         )
 
+    @Ignore("Long-running generation task — run manually")
     @Test
     fun generateAllExamples() {
         val targets = SolutionType.entries.filter { it.hasSolver }.toSet()

@@ -5,13 +5,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import sudoku.core.generator.Generator
-import sudoku.core.generator.buildHighlights
-import sudoku.core.model.Board
+import sudoku.app.engine.Buddies
+import sudoku.app.engine.NativeEngine
 import sudoku.core.model.CandidateHighlight
 import sudoku.core.model.Difficulty
 import sudoku.core.model.HighlightRole
-import sudoku.core.solver.StepFinder
+import sudoku.core.model.SolutionStep
 
 class GameViewModel(
     initialState: GameState = GameState(showNewGameDialog = true),
@@ -25,10 +24,11 @@ class GameViewModel(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var timerJob: Job? = null
     private var generateJob: Job? = null
-    private val stepFinder = StepFinder()
 
-    /** Cached solver board for building highlights at hint level 3. */
-    private var hintBoard: Board? = null
+    /** Cached hint step's board state for building highlights at level 3. */
+    private var hintValues: IntArray? = null
+    private var hintPencilMarks: Array<out Set<Int>>? = null
+    private var hintSolution: IntArray? = null
 
     /** Cached pencil mark errors for hint flow (transient, not in GameState). */
     private var pencilMarkErrors: PencilMarkErrors? = null
@@ -120,11 +120,9 @@ class GameViewModel(
             } else {
                 newValues[idx] = digit
                 marks[idx].clear()
-                // Remove this digit from pencil marks of peers
-                for (peer in Board.BUDDIES_ARRAY[idx]) {
+                for (peer in Buddies.ARRAY[idx]) {
                     marks[peer].remove(digit)
                 }
-                // Count error if wrong digit placed and solution is known
                 if (s.solution[idx] != 0 && digit != s.solution[idx]) {
                     newErrorCount++
                 }
@@ -230,7 +228,6 @@ class GameViewModel(
         if (s.isWon) return
         saveUndo()
         val marks = computeAllCandidates(s.values)
-        // Preserve: don't overwrite fixed cells (they'll have emptySet anyway)
         _state.value =
             s.copy(
                 pencilMarks = marks,
@@ -353,7 +350,7 @@ class GameViewModel(
         val marks = cleared.pencilMarks.map { it.toMutableSet() }.toTypedArray()
         newValues[idx] = digit
         marks[idx].clear()
-        for (peer in Board.BUDDIES_ARRAY[idx]) {
+        for (peer in Buddies.ARRAY[idx]) {
             marks[peer].remove(digit)
         }
         val isWon = checkWin(newValues, cleared.solution)
@@ -386,13 +383,12 @@ class GameViewModel(
 
         generateJob =
             scope.launch {
-                val generator = Generator()
-                val puzzle = generator.generate(difficulty)
+                val result = NativeEngine.generatePuzzle(difficulty, 200)
 
                 val values = IntArray(81)
                 val fixed = BooleanArray(81)
-                for (i in puzzle.puzzle.indices) {
-                    val ch = puzzle.puzzle[i]
+                for (i in result.puzzle.indices) {
+                    val ch = result.puzzle[i]
                     if (ch in '1'..'9') {
                         values[i] = ch - '0'
                         fixed[i] = true
@@ -403,13 +399,13 @@ class GameViewModel(
                     GameState(
                         values = values,
                         fixed = fixed,
-                        solution = puzzle.solution,
+                        solution = result.solution,
                         pencilMarks = Array(81) { mutableSetOf() },
                         selectedRow = -1,
                         selectedCol = -1,
                         pencilMode = false,
                         errorChecking = true,
-                        difficulty = puzzle.difficulty,
+                        difficulty = result.difficulty,
                         elapsedSeconds = 0L,
                         isWon = false,
                         showNewGameDialog = false,
@@ -454,30 +450,12 @@ class GameViewModel(
         if (s.hintLevel == 0 && s.hintMessage == null) {
             s
         } else {
-            hintBoard = null
+            hintValues = null
+            hintPencilMarks = null
+            hintSolution = null
             pencilMarkErrors = null
             s.copy(hintLevel = 0, hintStep = null, hintHighlights = emptyList(), hintMessage = null)
         }
-
-    private fun buildSolverBoard(s: GameState): Board {
-        val board = Board()
-        for (i in 0 until 81) {
-            if (s.values[i] != 0) {
-                board.setCell(i, s.values[i], isFixed = s.fixed[i])
-            }
-        }
-        // Restrict board candidates to match user pencil marks
-        for (i in 0 until 81) {
-            if (s.values[i] == 0 && s.pencilMarks[i].isNotEmpty()) {
-                for (d in 1..9) {
-                    if (board.isCandidate(i, d) && d !in s.pencilMarks[i]) {
-                        board.setCandidate(i, d, false)
-                    }
-                }
-            }
-        }
-        return board
-    }
 
     private fun requestHint() {
         val s = _state.value
@@ -504,10 +482,12 @@ class GameViewModel(
                     return
                 }
 
-                // Vague: find next step
-                val board = buildSolverBoard(s)
-                val step = stepFinder.findNextStep(board) ?: return
-                hintBoard = board
+                // Vague: find next step via Rust engine
+                val step = NativeEngine.findNextStep(s.values, s.pencilMarks, s.solution, null)
+                    ?: return
+                hintValues = s.values.copyOf()
+                hintPencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray()
+                hintSolution = s.solution.copyOf()
                 _state.value =
                     s.copy(
                         hintLevel = 1,
@@ -523,10 +503,12 @@ class GameViewModel(
             }
 
             2 -> {
-                // Full: build highlights from cached board + step
+                // Full: build highlights from cached board state + step
                 val step = s.hintStep ?: return
-                val board = hintBoard ?: return
-                val highlights = buildHighlights(board, step)
+                val vals = hintValues ?: return
+                val marks = hintPencilMarks ?: return
+                val sol = hintSolution ?: return
+                val highlights = NativeEngine.buildHighlights(vals, marks, sol, step)
                 _state.value = s.copy(hintLevel = 3, hintHighlights = highlights)
             }
 
@@ -540,7 +522,7 @@ class GameViewModel(
                 if (step.type.isSingle) {
                     newValues[step.cellIndex] = step.value
                     marks[step.cellIndex].clear()
-                    for (peer in Board.BUDDIES_ARRAY[step.cellIndex]) {
+                    for (peer in Buddies.ARRAY[step.cellIndex]) {
                         marks[peer].remove(step.value)
                     }
                 } else {
@@ -552,7 +534,9 @@ class GameViewModel(
                     }
                 }
 
-                hintBoard = null
+                hintValues = null
+                hintPencilMarks = null
+                hintSolution = null
                 val isWon = checkWin(newValues, s.solution)
                 _state.value =
                     s.copy(

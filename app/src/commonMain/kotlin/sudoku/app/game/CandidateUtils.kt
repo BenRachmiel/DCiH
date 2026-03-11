@@ -1,6 +1,6 @@
 package sudoku.app.game
 
-import sudoku.core.model.Board
+import sudoku.app.engine.Buddies
 
 fun computeCandidates(
     values: IntArray,
@@ -8,7 +8,7 @@ fun computeCandidates(
 ): Set<Int> {
     if (values[index] != 0) return emptySet()
     val used = BooleanArray(10)
-    for (buddy in Board.BUDDIES_ARRAY[index]) {
+    for (buddy in Buddies.ARRAY[index]) {
         val v = values[buddy]
         if (v != 0) used[v] = true
     }

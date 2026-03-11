@@ -1,5 +1,4 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -15,17 +14,17 @@ kotlin {
         }
     }
     jvm("desktop")
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser {
-            testTask {
-                enabled = false
-            }
-        }
-        binaries.executable()
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     sourceSets {
+        // Intermediate JVM source set shared by Android and Desktop
+        val jvmMain by creating {
+            dependsOn(commonMain.get())
+        }
+
         commonMain.dependencies {
             implementation(project(":core"))
             implementation(compose.runtime)
@@ -39,10 +38,14 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
-        androidMain.dependencies {
-            implementation("androidx.activity:activity-compose:1.9.3")
+        androidMain {
+            dependsOn(jvmMain)
+            dependencies {
+                implementation("androidx.activity:activity-compose:1.9.3")
+            }
         }
         val desktopMain by getting {
+            dependsOn(jvmMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
             }

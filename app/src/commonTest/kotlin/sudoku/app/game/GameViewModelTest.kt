@@ -1,5 +1,6 @@
 package sudoku.app.game
 
+import sudoku.app.engine.Buddies
 import sudoku.core.model.Board
 import sudoku.core.model.Difficulty
 import sudoku.core.model.SolutionStep
@@ -325,7 +326,7 @@ class GameViewModelTest {
         var impossibleDigit = 0
         for (i in 0 until 81) {
             if (vm.state.value.values[i] != 0) continue
-            for (buddy in Board.BUDDIES_ARRAY[i]) {
+            for (buddy in Buddies.ARRAY[i]) {
                 val v = vm.state.value.values[buddy]
                 if (v != 0 && v !in vm.state.value.pencilMarks[i]) {
                     targetIdx = i
@@ -441,7 +442,7 @@ class GameViewModelTest {
         var impossibleDigit = 0
         for (i in 0 until 81) {
             if (vm.state.value.values[i] != 0) continue
-            for (buddy in Board.BUDDIES_ARRAY[i]) {
+            for (buddy in Buddies.ARRAY[i]) {
                 val v = vm.state.value.values[buddy]
                 if (v != 0 && v !in vm.state.value.pencilMarks[i]) {
                     impossibleCell = i

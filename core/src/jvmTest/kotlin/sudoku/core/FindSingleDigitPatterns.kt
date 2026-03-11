@@ -5,6 +5,7 @@ import sudoku.core.model.*
 import sudoku.core.solver.StepFinder
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 /**
@@ -12,6 +13,7 @@ import kotlin.test.Test
  * Not a real test — prints puzzle strings for use in tests.
  */
 class FindSingleDigitPatterns {
+    @Ignore("Long-running generation task — run manually")
     @Test
     fun findPuzzles() = runBlocking {
         val stepFinder = StepFinder()
