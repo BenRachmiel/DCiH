@@ -3,7 +3,7 @@ use crate::step::SolutionStep;
 use crate::tables::*;
 use crate::types::SolutionType;
 
-use super::Solver;
+use super::{Solver, combinations};
 
 pub struct SimpleSolver;
 
@@ -369,7 +369,7 @@ fn find_hidden_subset(board: &Board, size: usize) -> Option<SolutionStep> {
             continue;
         }
 
-        let digit_combos = combinations_u8(&available_digits, size);
+        let digit_combos = combinations(&available_digits, size);
         for digit_combo in digit_combos {
             // Find cells containing any of these digits
             let mut cell_set = Vec::new();
@@ -411,50 +411,3 @@ fn find_hidden_subset(board: &Board, size: usize) -> Option<SolutionStep> {
     None
 }
 
-fn combinations(items: &[usize], size: usize) -> Vec<Vec<usize>> {
-    let mut result = Vec::new();
-    let mut current = Vec::with_capacity(size);
-    fn recurse(
-        items: &[usize],
-        start: usize,
-        size: usize,
-        current: &mut Vec<usize>,
-        result: &mut Vec<Vec<usize>>,
-    ) {
-        if current.len() == size {
-            result.push(current.clone());
-            return;
-        }
-        for i in start..items.len() {
-            current.push(items[i]);
-            recurse(items, i + 1, size, current, result);
-            current.pop();
-        }
-    }
-    recurse(items, 0, size, &mut current, &mut result);
-    result
-}
-
-fn combinations_u8(items: &[u8], size: usize) -> Vec<Vec<u8>> {
-    let mut result = Vec::new();
-    let mut current = Vec::with_capacity(size);
-    fn recurse(
-        items: &[u8],
-        start: usize,
-        size: usize,
-        current: &mut Vec<u8>,
-        result: &mut Vec<Vec<u8>>,
-    ) {
-        if current.len() == size {
-            result.push(current.clone());
-            return;
-        }
-        for i in start..items.len() {
-            current.push(items[i]);
-            recurse(items, i + 1, size, current, result);
-            current.pop();
-        }
-    }
-    recurse(items, 0, size, &mut current, &mut result);
-    result
-}

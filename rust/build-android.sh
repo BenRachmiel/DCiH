@@ -8,7 +8,7 @@ cd "$(dirname "$0")/sudoku-core"
 # Build for arm64 and x86_64
 cargo ndk --target aarch64-linux-android --target x86_64-linux-android \
     --platform 24 \
-    build --release --features jni
+    build --release --features uniffi
 
 # Copy to jniLibs
 JNILIBS="../../app/src/androidMain/jniLibs"

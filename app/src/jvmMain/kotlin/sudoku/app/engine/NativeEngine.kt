@@ -73,9 +73,7 @@ actual object NativeEngine {
         val (byteValues, candMasks, byteSolution) = buildArrays(values, pencilMarks, solution)
         return sudoku.engine.uniffi.buildStepHighlights(
             byteValues, candMasks, byteSolution, step.toFfi(),
-        ).map { h ->
-            CandidateHighlight(h.cellIndex.toInt(), h.value.toInt(), h.role.toApp())
-        }
+        ).map { it.toApp() }
     }
 
     actual fun generateExample(type: SolutionType, maxAttempts: Int): BoardExample? {
@@ -86,9 +84,7 @@ actual object NativeEngine {
         return BoardExample(
             puzzle = ex.puzzle,
             candidateMasks = ex.candidateMasks.map { it.toInt() }.toIntArray(),
-            highlights = ex.highlights.map { h ->
-                CandidateHighlight(h.cellIndex.toInt(), h.value.toInt(), h.role.toApp())
-            },
+            highlights = ex.highlights.map { it.toApp() },
         )
     }
 
@@ -173,6 +169,9 @@ actual object NativeEngine {
     private fun FfiDifficulty.toApp(): Difficulty = Difficulty.entries[ordinal]
 
     private fun FfiHighlightRole.toApp(): HighlightRole = HighlightRole.entries[ordinal]
+
+    private fun sudoku.engine.uniffi.FfiCandidateHighlight.toApp(): CandidateHighlight =
+        CandidateHighlight(cellIndex.toInt(), value.toInt(), role.toApp())
 
     private fun FfiSolutionType.toApp(): SolutionType = SolutionType.entries[ordinal]
 

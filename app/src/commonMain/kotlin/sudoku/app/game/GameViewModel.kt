@@ -11,6 +11,8 @@ import sudoku.app.model.CandidateHighlight
 import sudoku.app.model.Difficulty
 import sudoku.app.model.HighlightRole
 import sudoku.app.model.SolutionStep
+import sudoku.app.game.copyMutable
+import sudoku.app.game.copyImmutable
 
 class GameViewModel(
     initialState: GameState = GameState(showNewGameDialog = true),
@@ -83,7 +85,7 @@ class GameViewModel(
             if (editable.isEmpty()) return
 
             saveUndo()
-            val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+            val marks = s.pencilMarks.copyMutable()
             val anyHas = editable.any { digit in marks[it] }
             for (i in editable) {
                 if (anyHas) marks[i].remove(digit) else marks[i].add(digit)
@@ -103,7 +105,7 @@ class GameViewModel(
         saveUndo()
 
         if (s.pencilMode) {
-            val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+            val marks = s.pencilMarks.copyMutable()
             if (digit in marks[idx]) marks[idx].remove(digit) else marks[idx].add(digit)
             _state.value =
                 s.copy(
@@ -112,7 +114,7 @@ class GameViewModel(
                 )
         } else {
             val newValues = s.values.copyOf()
-            val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+            val marks = s.pencilMarks.copyMutable()
 
             var newErrorCount = s.errorCount
             if (newValues[idx] == digit) {
@@ -150,7 +152,7 @@ class GameViewModel(
 
         saveUndo()
         val newValues = s.values.copyOf()
-        val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+        val marks = s.pencilMarks.copyMutable()
         newValues[idx] = 0
         marks[idx].clear()
         _state.value =
@@ -179,11 +181,11 @@ class GameViewModel(
         redoStack.add(
             UndoEntry(
                 values = s.values.copyOf(),
-                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+                pencilMarks = s.pencilMarks.copyImmutable(),
             ),
         )
         val entry = undoStack.removeLast()
-        val marks = entry.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+        val marks = entry.pencilMarks.copyMutable()
         _state.value =
             s.copy(
                 values = entry.values,
@@ -198,11 +200,11 @@ class GameViewModel(
         undoStack.add(
             UndoEntry(
                 values = s.values.copyOf(),
-                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+                pencilMarks = s.pencilMarks.copyImmutable(),
             ),
         )
         val entry = redoStack.removeLast()
-        val marks = entry.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+        val marks = entry.pencilMarks.copyMutable()
         _state.value =
             s.copy(
                 values = entry.values,
@@ -216,7 +218,7 @@ class GameViewModel(
         undoStack.add(
             UndoEntry(
                 values = s.values.copyOf(),
-                pencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray(),
+                pencilMarks = s.pencilMarks.copyImmutable(),
             ),
         )
         // Limit undo stack
@@ -281,7 +283,7 @@ class GameViewModel(
         val cleared = clearHint(s)
         saveUndo()
         val newValues = cleared.values.copyOf()
-        val marks = cleared.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+        val marks = cleared.pencilMarks.copyMutable()
         newValues[idx] = digit
         marks[idx].clear()
         for (peer in Buddies.ARRAY[idx]) {
@@ -420,7 +422,7 @@ class GameViewModel(
                 val step = NativeEngine.findNextStep(s.values, s.pencilMarks, s.solution, null)
                     ?: return
                 hintValues = s.values.copyOf()
-                hintPencilMarks = s.pencilMarks.map { it.toSet() }.toTypedArray()
+                hintPencilMarks = s.pencilMarks.copyImmutable()
                 hintSolution = s.solution.copyOf()
                 _state.value =
                     s.copy(
@@ -451,7 +453,7 @@ class GameViewModel(
                 val step = s.hintStep ?: return
                 saveUndo()
                 val newValues = s.values.copyOf()
-                val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+                val marks = s.pencilMarks.copyMutable()
 
                 if (step.type.isSingle) {
                     newValues[step.cellIndex] = step.value
@@ -517,7 +519,7 @@ class GameViewModel(
             3 -> {
                 // Execute: fix all pencil mark errors
                 saveUndo()
-                val marks = s.pencilMarks.map { it.toMutableSet() }.toTypedArray()
+                val marks = s.pencilMarks.copyMutable()
                 for ((cell, digit) in errors.toRemove) {
                     marks[cell].remove(digit)
                 }

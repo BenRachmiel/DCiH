@@ -9,6 +9,30 @@ use crate::board::Board;
 use crate::step::SolutionStep;
 use crate::types::{Difficulty, SolutionType};
 
+pub fn combinations<T: Clone>(items: &[T], size: usize) -> Vec<Vec<T>> {
+    let mut result = Vec::new();
+    let mut current = Vec::with_capacity(size);
+    fn recurse<T: Clone>(
+        items: &[T],
+        start: usize,
+        size: usize,
+        current: &mut Vec<T>,
+        result: &mut Vec<Vec<T>>,
+    ) {
+        if current.len() == size {
+            result.push(current.clone());
+            return;
+        }
+        for i in start..items.len() {
+            current.push(items[i].clone());
+            recurse(items, i + 1, size, current, result);
+            current.pop();
+        }
+    }
+    recurse(items, 0, size, &mut current, &mut result);
+    result
+}
+
 /// Trait for all solver strategies.
 pub trait Solver {
     fn find_steps(&self, board: &Board) -> Vec<SolutionStep>;

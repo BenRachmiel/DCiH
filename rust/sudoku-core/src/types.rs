@@ -36,16 +36,6 @@ impl Difficulty {
         }
     }
 
-    pub const fn label(self) -> &'static str {
-        match self {
-            Difficulty::Easy => "Easy",
-            Difficulty::Medium => "Medium",
-            Difficulty::Hard => "Hard",
-            Difficulty::Unfair => "Unfair",
-            Difficulty::Extreme => "Extreme",
-        }
-    }
-
     pub const fn ordinal(self) -> usize {
         match self {
             Difficulty::Easy => 0,

@@ -32,11 +32,14 @@ object ExampleCache {
         if (_generating.value != null) return
         scope.launch(Dispatchers.Default) {
             _generating.value = type
-            val example = NativeEngine.generateExample(type, 200)
-            if (example != null) {
-                _examples.value = _examples.value + (type to example)
+            try {
+                val example = NativeEngine.generateExample(type, 200)
+                if (example != null) {
+                    _examples.value = _examples.value + (type to example)
+                }
+            } finally {
+                _generating.value = null
             }
-            _generating.value = null
         }
     }
 }

@@ -15,15 +15,11 @@ fun computeCandidates(
     return buildSet { for (d in 1..9) if (!used[d]) add(d) }
 }
 
-/** Returns pencil marks if non-empty, else computed candidates. Single source of truth for user-visible candidates. */
-fun effectiveCandidates(
-    values: IntArray,
-    pencilMarks: Array<out Set<Int>>,
-    index: Int,
-): Set<Int> {
-    val marks = pencilMarks[index]
-    return if (marks.isNotEmpty()) marks else computeCandidates(values, index)
-}
+fun Array<out Set<Int>>.copyMutable(): Array<MutableSet<Int>> =
+    Array(size) { this[it].toMutableSet() }
+
+fun Array<out Set<Int>>.copyImmutable(): Array<Set<Int>> =
+    Array(size) { this[it].toSet() }
 
 data class PencilMarkErrors(
     /** (cellIndex, digit) pairs: candidate digit already placed in a peer */

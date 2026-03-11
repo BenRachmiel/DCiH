@@ -33,54 +33,23 @@ fun GameToolbar(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (state.peerHighlight) {
-            FilledTonalButton(
-                onClick = { onAction(GameAction.TogglePeerHighlight) },
-                shape = btnShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Text("Peers", fontSize = 14.sp)
-            }
-        } else {
-            OutlinedButton(
-                onClick = { onAction(GameAction.TogglePeerHighlight) },
-                shape = btnShape,
-                colors = outlinedColors,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Text("Peers", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            }
-        }
-        // Hint button — short fixed-width labels; detail shown in HintTextRow
-        val hintLabel =
-            when (state.hintLevel) {
+        ToggleButton(
+            active = state.peerHighlight,
+            label = "Peers",
+            outlinedColors = outlinedColors,
+            onClick = { onAction(GameAction.TogglePeerHighlight) },
+        )
+        ToggleButton(
+            active = state.hintLevel > 0,
+            label = when (state.hintLevel) {
                 1 -> "More"
                 2 -> "Show"
                 3 -> "Execute"
                 else -> "Hint"
-            }
-        if (state.hintLevel > 0) {
-            FilledTonalButton(
-                onClick = { onAction(GameAction.RequestHint) },
-                shape = btnShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Text(hintLabel, fontSize = 14.sp, maxLines = 1)
-            }
-        } else {
-            OutlinedButton(
-                onClick = { onAction(GameAction.RequestHint) },
-                shape = btnShape,
-                colors = outlinedColors,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Text("Hint", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            }
-        }
+            },
+            outlinedColors = outlinedColors,
+            onClick = { onAction(GameAction.RequestHint) },
+        )
         OutlinedButton(
             onClick = { onAction(GameAction.FillAllCandidates) },
             shape = btnShape,
@@ -102,6 +71,35 @@ fun GameToolbar(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         ) {
             Text("New", fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun ToggleButton(
+    active: Boolean,
+    label: String,
+    outlinedColors: ButtonColors,
+    onClick: () -> Unit,
+) {
+    if (active) {
+        FilledTonalButton(
+            onClick = onClick,
+            shape = btnShape,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        ) {
+            Text(label, fontSize = 14.sp, maxLines = 1)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            shape = btnShape,
+            colors = outlinedColors,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        ) {
+            Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }

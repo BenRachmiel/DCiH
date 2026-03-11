@@ -87,6 +87,18 @@ impl From<&FfiSolutionStep> for SolutionStep {
     }
 }
 
+fn vec_to_vals(v: &[u8]) -> [u8; 81] {
+    let mut arr = [0u8; 81];
+    arr.copy_from_slice(&v[..81]);
+    arr
+}
+
+fn vec_to_cands(v: &[u16]) -> [u16; 81] {
+    let mut arr = [0u16; 81];
+    arr.copy_from_slice(&v[..81]);
+    arr
+}
+
 fn board_from_vecs(values: &[u8], cand_masks: &[u16], solution: &[u8]) -> Board {
     let mut board = Board::new();
     for i in 0..81 {
@@ -152,8 +164,7 @@ fn build_step_highlights(
 
 #[uniffi::export]
 fn count_solutions(values: Vec<u8>, max_count: u32) -> u32 {
-    let mut vals = [0u8; 81];
-    vals.copy_from_slice(&values[..81]);
+    let vals = vec_to_vals(&values);
     let mut generator = Generator::new();
     generator.count_solutions_values(&vals, max_count as usize) as u32
 }
@@ -181,9 +192,7 @@ fn generate_board_example(
 
 #[uniffi::export]
 fn compute_all_candidates(values: Vec<u8>) -> Vec<u16> {
-    let mut vals = [0u8; 81];
-    vals.copy_from_slice(&values[..81]);
-    board::compute_all_candidates(&vals).to_vec()
+    board::compute_all_candidates(&vec_to_vals(&values)).to_vec()
 }
 
 #[uniffi::export]
@@ -192,42 +201,20 @@ fn find_pencil_mark_errors(
     cand_masks: Vec<u16>,
     solution: Vec<u8>,
 ) -> Option<FfiPencilMarkErrors> {
-    let mut vals = [0u8; 81];
-    let mut cands = [0u16; 81];
-    let mut sol = [0u8; 81];
-    vals.copy_from_slice(&values[..81]);
-    for i in 0..81 {
-        cands[i] = cand_masks[i];
-    }
-    sol.copy_from_slice(&solution[..81]);
+    let vals = vec_to_vals(&values);
+    let cands = vec_to_cands(&cand_masks);
+    let sol = vec_to_vals(&solution);
 
+    let to_ffi = |(c, d): (usize, u8)| FfiCandidateRemoval { cell: c as u32, digit: d };
     board::find_pencil_mark_errors(&vals, &cands, &sol).map(|(to_remove, to_add)| {
         FfiPencilMarkErrors {
-            to_remove: to_remove
-                .into_iter()
-                .map(|(c, d)| FfiCandidateRemoval {
-                    cell: c as u32,
-                    digit: d,
-                })
-                .collect(),
-            to_add: to_add
-                .into_iter()
-                .map(|(c, d)| FfiCandidateRemoval {
-                    cell: c as u32,
-                    digit: d,
-                })
-                .collect(),
+            to_remove: to_remove.into_iter().map(&to_ffi).collect(),
+            to_add: to_add.into_iter().map(to_ffi).collect(),
         }
     })
 }
 
 #[uniffi::export]
 fn find_single_for_cell(values: Vec<u8>, cand_masks: Vec<u16>, cell_index: u32) -> u8 {
-    let mut vals = [0u8; 81];
-    let mut cands = [0u16; 81];
-    vals.copy_from_slice(&values[..81]);
-    for i in 0..81 {
-        cands[i] = cand_masks[i];
-    }
-    board::find_single_for_cell(&vals, &cands, cell_index as usize)
+    board::find_single_for_cell(&vec_to_vals(&values), &vec_to_cands(&cand_masks), cell_index as usize)
 }

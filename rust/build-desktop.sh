@@ -3,7 +3,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/sudoku-core"
-cargo build --release --features jni
+cargo build --release --features uniffi
 
 # Determine the OS-specific library name
 case "$(uname -s)" in

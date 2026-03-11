@@ -3,7 +3,7 @@ use crate::step::SolutionStep;
 use crate::tables::*;
 use crate::types::SolutionType;
 
-use super::Solver;
+use super::{Solver, combinations};
 
 pub struct FishSolver;
 
@@ -49,7 +49,7 @@ fn find_fish(board: &Board, size: usize, use_rows: bool) -> Option<SolutionStep>
         }
 
         // Try all size-combinations
-        let combos = combinations_idx(&candidate_lines, size);
+        let combos = combinations(&candidate_lines, size);
         for combo in combos {
             // Collect all fish cells and determine cover set
             let mut fish_cells = Vec::new();
@@ -96,29 +96,3 @@ fn find_fish(board: &Board, size: usize, use_rows: bool) -> Option<SolutionStep>
     None
 }
 
-fn combinations_idx<T: Clone>(
-    items: &[(usize, T)],
-    size: usize,
-) -> Vec<Vec<(usize, T)>> {
-    let mut result = Vec::new();
-    let mut current = Vec::with_capacity(size);
-    fn recurse<T: Clone>(
-        items: &[(usize, T)],
-        start: usize,
-        size: usize,
-        current: &mut Vec<(usize, T)>,
-        result: &mut Vec<Vec<(usize, T)>>,
-    ) {
-        if current.len() == size {
-            result.push(current.clone());
-            return;
-        }
-        for i in start..items.len() {
-            current.push(items[i].clone());
-            recurse(items, i + 1, size, current, result);
-            current.pop();
-        }
-    }
-    recurse(items, 0, size, &mut current, &mut result);
-    result
-}
