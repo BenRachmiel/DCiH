@@ -11,6 +11,7 @@ class StepFinder {
     private val solvers = listOf(
         SimpleSolver(),
         FishSolver(),
+        SingleDigitPatternSolver(),
         WingSolver(),
         ColoringSolver(),
         BruteForceSolver()

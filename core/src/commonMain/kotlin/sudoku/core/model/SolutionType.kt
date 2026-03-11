@@ -60,6 +60,7 @@ enum class SolutionType(
                 NAKED_PAIR, NAKED_TRIPLE, NAKED_QUADRUPLE,
                 HIDDEN_PAIR, HIDDEN_TRIPLE, HIDDEN_QUADRUPLE,
                 X_WING, SWORDFISH, JELLYFISH,
+                SKYSCRAPER, TWO_STRING_KITE, EMPTY_RECTANGLE, TURBOT_FISH,
                 XY_WING, XYZ_WING, W_WING,
                 SIMPLE_COLORS_TRAP, SIMPLE_COLORS_WRAP,
                 -> true

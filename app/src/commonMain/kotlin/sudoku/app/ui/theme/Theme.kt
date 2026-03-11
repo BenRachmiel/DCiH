@@ -59,11 +59,12 @@ private val DarkColors =
 
 @Composable
 fun SudokuTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
+    val isDark = darkTheme ?: isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = if (isDark) DarkColors else LightColors,
         content = content,
     )
 }

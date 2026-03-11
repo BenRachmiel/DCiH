@@ -24,3 +24,4 @@ obsidian
 .DS_Store
 
 .*/
+!.github/

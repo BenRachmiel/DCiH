@@ -22,6 +22,8 @@ fun HomeScreen(
     onPracticeClick: () -> Unit,
     gradientEnabled: Boolean = true,
     onToggleGradient: () -> Unit = {},
+    darkMode: Boolean = false,
+    onToggleDarkMode: () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -33,6 +35,17 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Text(
+                    "Dark",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(8.dp))
+                Switch(
+                    checked = darkMode,
+                    onCheckedChange = { onToggleDarkMode() },
+                )
+                Spacer(Modifier.width(16.dp))
                 Text(
                     "Gradient",
                     style = MaterialTheme.typography.labelMedium,

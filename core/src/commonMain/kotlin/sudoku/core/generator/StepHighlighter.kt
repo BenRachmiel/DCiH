@@ -97,6 +97,36 @@ fun buildHighlights(
             }
         }
 
+        // Single-digit patterns (2-link chains): indices = [start, end, conn, far]
+        // DEFINING on chain endpoints, SECONDARY on connection cells
+        SolutionType.SKYSCRAPER,
+        SolutionType.TWO_STRING_KITE,
+        SolutionType.TURBOT_FISH,
+        -> {
+            val start = step.indices[0]
+            val far = step.indices[3]
+            highlights.add(CandidateHighlight(start, step.value, DEFINING))
+            highlights.add(CandidateHighlight(far, step.value, DEFINING))
+            highlights.add(CandidateHighlight(step.indices[1], step.value, SECONDARY))
+            highlights.add(CandidateHighlight(step.indices[2], step.value, SECONDARY))
+            for ((cell, digit) in step.candidatesRemoved) {
+                highlights.add(CandidateHighlight(cell, digit, ELIMINATION))
+            }
+        }
+
+        // Empty Rectangle: indices = [linkEnd1, linkEnd2, ...erCells]
+        // DEFINING on strong link cells, SECONDARY on ER box cells
+        SolutionType.EMPTY_RECTANGLE -> {
+            highlights.add(CandidateHighlight(step.indices[0], step.value, DEFINING))
+            highlights.add(CandidateHighlight(step.indices[1], step.value, DEFINING))
+            for (i in 2 until step.indices.size) {
+                highlights.add(CandidateHighlight(step.indices[i], step.value, SECONDARY))
+            }
+            for ((cell, digit) in step.candidatesRemoved) {
+                highlights.add(CandidateHighlight(cell, digit, ELIMINATION))
+            }
+        }
+
         // Fish: DEFINING on fish cells with the digit, ELIMINATION on removed
         SolutionType.X_WING,
         SolutionType.SWORDFISH,

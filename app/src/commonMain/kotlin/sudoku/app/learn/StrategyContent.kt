@@ -1797,7 +1797,7 @@ private fun buildEntries(): List<StrategyEntry> =
             relatedTypes = listOf(SolutionType.SWORDFISH, SolutionType.X_WING),
             keywords = listOf("jellyfish", "fish", "four rows four columns"),
         ),
-        // ── Single-Digit Patterns (hand-crafted — no solvers) ─────────────────
+        // ── Single-Digit Patterns ──────────────────────────────────────────────
         StrategyEntry(
             type = SolutionType.SKYSCRAPER,
             theory =
@@ -1811,51 +1811,26 @@ private fun buildEntries(): List<StrategyEntry> =
                     "• Cells seeing both non-base endpoints can be eliminated.",
             example =
                 BoardExample(
-                    puzzle =
-                        "895321670" +
-                            "320000819" +
-                            "176089325" +
-                            "918265034" +
-                            "263894157" +
-                            "754013968" +
-                            "580000291" +
-                            "631928740" +
-                            "049071586",
-                    candidateMasks =
-                        fullBoard(
-                            "895321670" +
-                                "320000819" +
-                                "176089325" +
-                                "918265034" +
-                                "263894157" +
-                                "754013968" +
-                                "580000291" +
-                                "631928740" +
-                                "049071586",
-                            mapOf(
-                                cell(0, 7) to mask(4),
-                                cell(1, 1) to mask(4, 6),
-                                cell(1, 2) to mask(4, 6),
-                                cell(1, 3) to mask(4, 5, 6, 7),
-                                cell(1, 4) to mask(5, 6, 7),
-                                cell(1, 7) to mask(4),
-                                cell(3, 7) to mask(7),
-                                cell(3, 8) to mask(7),
-                                cell(5, 4) to mask(2),
-                                cell(6, 1) to mask(4, 6, 7),
-                                cell(6, 2) to mask(4, 6, 7),
-                                cell(6, 3) to mask(3, 4, 6, 7),
-                                cell(6, 4) to mask(3, 6, 7),
-                                cell(6, 5) to mask(4, 6),
-                            ),
-                        ),
+                    puzzle = "24..39.15..5.149.219.25...45.849.12.4.1.2.5.9.2.1654..7.2941.5..1.58.247.54.72.91",
+                    candidateMasks = intArrayOf(
+                        0, 0, 96, 224, 0, 0, 224, 0, 0,
+                        164, 196, 0, 96, 0, 0, 0, 36, 0,
+                        0, 0, 100, 0, 0, 224, 228, 164, 0,
+                        0, 100, 0, 0, 0, 68, 0, 0, 36,
+                        0, 100, 0, 196, 0, 196, 0, 100, 0,
+                        260, 0, 324, 0, 0, 0, 0, 196, 132,
+                        0, 132, 0, 0, 0, 0, 164, 0, 164,
+                        292, 0, 292, 0, 0, 36, 0, 0, 0,
+                        164, 0, 0, 36, 0, 0, 132, 0, 0,
+                    ),
                     highlights =
                         listOf(
-                            CandidateHighlight(cell(1, 2), 4, SECONDARY),
-                            CandidateHighlight(cell(6, 2), 4, SECONDARY),
-                            CandidateHighlight(cell(1, 7), 4, DEFINING),
-                            CandidateHighlight(cell(6, 5), 4, DEFINING),
-                            CandidateHighlight(cell(6, 3), 4, ELIMINATION),
+                            CandidateHighlight(12, 7, DEFINING),
+                            CandidateHighlight(32, 7, DEFINING),
+                            CandidateHighlight(10, 7, SECONDARY),
+                            CandidateHighlight(28, 7, SECONDARY),
+                            CandidateHighlight(23, 7, ELIMINATION),
+                            CandidateHighlight(39, 7, ELIMINATION),
                         ),
                 ),
             relatedTypes = listOf(SolutionType.TWO_STRING_KITE, SolutionType.TURBOT_FISH),
@@ -1873,61 +1848,25 @@ private fun buildEntries(): List<StrategyEntry> =
                     "• The other two cells are the 'kite tips' — eliminate from cells seeing both.",
             example =
                 BoardExample(
-                    puzzle =
-                        "900800090" +
-                            "804090000" +
-                            "372641580" +
-                            "743568219" +
-                            "681924357" +
-                            "259317468" +
-                            "036059020" +
-                            "090206030" +
-                            "520083940",
-                    candidateMasks =
-                        fullBoard(
-                            "900800090" +
-                                "804090000" +
-                                "372641580" +
-                                "743568219" +
-                                "681924357" +
-                                "259317468" +
-                                "036059020" +
-                                "090206030" +
-                                "520083940",
-                            mapOf(
-                                cell(0, 0) to mask(5),
-                                cell(0, 1) to mask(1, 5, 6),
-                                cell(0, 3) to mask(2, 3, 5),
-                                cell(0, 5) to mask(2, 3, 5),
-                                cell(0, 7) to mask(1, 2, 3, 6),
-                                cell(0, 8) to mask(1, 2, 3),
-                                cell(1, 1) to mask(1, 5, 6),
-                                cell(1, 3) to mask(2, 3, 5),
-                                cell(1, 5) to mask(2, 3, 5, 7),
-                                cell(1, 6) to mask(1, 2, 3, 6, 7),
-                                cell(1, 7) to mask(1, 2, 3, 6, 7),
-                                cell(1, 8) to mask(1, 2, 3),
-                                cell(2, 7) to mask(9),
-                                cell(6, 4) to mask(7),
-                                cell(6, 6) to mask(1, 7, 8),
-                                cell(6, 8) to mask(1, 7),
-                                cell(7, 0) to mask(1, 4, 8),
-                                cell(7, 1) to mask(1, 4, 7, 8),
-                                cell(7, 4) to mask(4, 7),
-                                cell(7, 6) to mask(1, 5, 7, 8),
-                                cell(7, 8) to mask(1, 5),
-                                cell(8, 4) to mask(1, 7),
-                                cell(8, 6) to mask(1, 7),
-                                cell(8, 8) to mask(1, 7),
-                            ),
-                        ),
+                    puzzle = ".4576219.6.251.4.7.7.43..5..1.85..7.5.729..41.6.174..5.5.641.2...6325.1..2.98756.",
+                    candidateMasks = intArrayOf(
+                        132, 0, 0, 0, 0, 0, 0, 0, 132,
+                        0, 260, 0, 0, 0, 384, 0, 132, 0,
+                        385, 0, 385, 0, 0, 384, 34, 0, 34,
+                        270, 0, 268, 0, 0, 36, 290, 0, 34,
+                        0, 132, 0, 0, 0, 36, 160, 0, 0,
+                        386, 0, 384, 0, 0, 0, 390, 132, 0,
+                        448, 0, 388, 0, 0, 0, 196, 0, 388,
+                        456, 384, 0, 0, 0, 0, 192, 0, 392,
+                        13, 0, 13, 0, 0, 0, 0, 0, 12,
+                    ),
                     highlights =
                         listOf(
-                            CandidateHighlight(cell(0, 7), 6, DEFINING),
-                            CandidateHighlight(cell(7, 1), 6, DEFINING),
-                            CandidateHighlight(cell(0, 1), 6, SECONDARY),
-                            CandidateHighlight(cell(1, 1), 6, SECONDARY),
-                            CandidateHighlight(cell(7, 6), 6, ELIMINATION),
+                            CandidateHighlight(0, 8, DEFINING),
+                            CandidateHighlight(52, 8, DEFINING),
+                            CandidateHighlight(8, 8, SECONDARY),
+                            CandidateHighlight(16, 8, SECONDARY),
+                            CandidateHighlight(45, 8, ELIMINATION),
                         ),
                 ),
             relatedTypes = listOf(SolutionType.SKYSCRAPER, SolutionType.EMPTY_RECTANGLE),
@@ -1946,58 +1885,25 @@ private fun buildEntries(): List<StrategyEntry> =
                     "• The other endpoint of the strong link sees the box's other arm for elimination.",
             example =
                 BoardExample(
-                    puzzle =
-                        "751489326" +
-                            "489326751" +
-                            "326751489" +
-                            "500040000" +
-                            "040000500" +
-                            "000500040" +
-                            "265098174" +
-                            "098174265" +
-                            "174265098",
-                    candidateMasks =
-                        fullBoard(
-                            "751489326" +
-                                "489326751" +
-                                "326751489" +
-                                "500040000" +
-                                "040000500" +
-                                "000500040" +
-                                "265098174" +
-                                "098174265" +
-                                "174265098",
-                            mapOf(
-                                cell(3, 0) to mask(6, 8),
-                                cell(3, 2) to mask(1, 2, 6, 8),
-                                cell(3, 3) to mask(1, 6, 7, 8),
-                                cell(3, 4) to mask(2, 3, 6, 7),
-                                cell(3, 6) to mask(1, 7, 8, 9),
-                                cell(3, 7) to mask(1, 2, 7, 8, 9),
-                                cell(3, 8) to mask(1, 2, 3, 7, 9),
-                                cell(4, 0) to mask(6),
-                                cell(4, 2) to mask(1, 2, 6),
-                                cell(4, 3) to mask(1, 2, 6, 7, 8),
-                                cell(4, 4) to mask(1, 2, 3, 6, 7, 8, 9),
-                                cell(4, 5) to mask(1, 2, 3, 6, 7, 8, 9),
-                                cell(4, 7) to mask(1, 2, 7, 8, 9),
-                                cell(4, 8) to mask(1, 2, 3, 7, 9),
-                                cell(5, 0) to mask(1, 6, 8, 9),
-                                cell(5, 1) to mask(1, 2, 3, 6, 7, 8, 9),
-                                cell(5, 2) to mask(1, 2, 6, 8, 9),
-                                cell(5, 4) to mask(2, 3, 6, 7, 8, 9),
-                                cell(5, 5) to mask(1, 2, 3, 6, 7, 8),
-                                cell(5, 7) to mask(1, 2, 7, 8, 9),
-                                cell(5, 8) to mask(1, 2, 3, 7),
-                            ),
-                        ),
+                    puzzle = "7.65..2.11.86..5...5....6.9.659..4..3.187.9.5.79..531.58....19.6....98.39.3..87.2",
+                    candidateMasks = intArrayOf(
+                        0, 260, 0, 0, 396, 12, 0, 140, 0,
+                        0, 260, 0, 0, 270, 78, 0, 76, 72,
+                        10, 0, 10, 69, 133, 69, 0, 196, 0,
+                        130, 0, 0, 0, 5, 5, 0, 66, 192,
+                        0, 10, 0, 0, 0, 42, 0, 34, 0,
+                        138, 0, 0, 10, 42, 0, 0, 0, 160,
+                        0, 0, 74, 78, 46, 110, 0, 0, 40,
+                        0, 11, 74, 75, 27, 0, 0, 24, 0,
+                        0, 9, 0, 9, 48, 0, 0, 48, 0,
+                    ),
                     highlights =
                         listOf(
-                            CandidateHighlight(cell(3, 4), 2, SECONDARY),
-                            CandidateHighlight(cell(4, 3), 2, SECONDARY),
-                            CandidateHighlight(cell(5, 4), 2, SECONDARY),
-                            CandidateHighlight(cell(3, 8), 2, DEFINING),
-                            CandidateHighlight(cell(5, 8), 2, ELIMINATION),
+                            CandidateHighlight(75, 4, DEFINING),
+                            CandidateHighlight(73, 4, DEFINING),
+                            CandidateHighlight(37, 4, SECONDARY),
+                            CandidateHighlight(45, 4, SECONDARY),
+                            CandidateHighlight(48, 4, ELIMINATION),
                         ),
                 ),
             relatedTypes = listOf(SolutionType.SKYSCRAPER, SolutionType.TWO_STRING_KITE),

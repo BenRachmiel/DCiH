@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import sudoku.app.navigation.Screen
+import androidx.compose.foundation.isSystemInDarkTheme
 import sudoku.app.ui.component.animatedGradient
 import sudoku.app.ui.screen.GameScreen
 import sudoku.app.ui.screen.HomeScreen
@@ -16,7 +17,12 @@ import sudoku.app.ui.theme.SudokuTheme
 
 @Composable
 fun App() {
-    SudokuTheme {
+    var darkMode by remember { mutableStateOf<Boolean?>(null) }
+
+    val resolvedDark = darkMode ?: isSystemInDarkTheme()
+
+    SudokuTheme(darkTheme = darkMode) {
+        SystemBarEffect(resolvedDark)
         var currentScreen: Screen by remember { mutableStateOf(Screen.Home) }
         var gradientEnabled by remember { mutableStateOf(true) }
 
@@ -37,6 +43,8 @@ fun App() {
                         onPracticeClick = { currentScreen = Screen.Practice() },
                         gradientEnabled = gradientEnabled,
                         onToggleGradient = { gradientEnabled = !gradientEnabled },
+                        darkMode = resolvedDark,
+                        onToggleDarkMode = { darkMode = !resolvedDark },
                     )
                 }
 
