@@ -43,7 +43,7 @@ class Generator(
         val totalAttempts = maxRetries * (difficulty.ordinal + 1)
 
         for (attempt in 0 until totalAttempts) {
-            if (attempt % 5 == 4) yield() // yield to avoid blocking on wasm
+            if (attempt % 5 == 4) yield() // yield to avoid blocking the UI thread
 
             generateFullGrid()
             generateInitPos(symmetric = true)
