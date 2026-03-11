@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import sudoku.app.game.GameAction
 import sudoku.app.game.GameState
-import sudoku.core.model.PuzzleJson
+import sudoku.app.model.PuzzleJson
 
 private val btnShape = RoundedCornerShape(6.dp)
 

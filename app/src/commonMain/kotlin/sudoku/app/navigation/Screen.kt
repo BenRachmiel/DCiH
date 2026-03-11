@@ -1,6 +1,6 @@
 package sudoku.app.navigation
 
-import sudoku.core.model.SolutionType
+import sudoku.app.model.SolutionType
 
 sealed class Screen {
     data object Home : Screen()

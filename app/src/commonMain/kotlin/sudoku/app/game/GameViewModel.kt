@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import sudoku.app.engine.Buddies
 import sudoku.app.engine.NativeEngine
-import sudoku.core.model.CandidateHighlight
-import sudoku.core.model.Difficulty
-import sudoku.core.model.HighlightRole
-import sudoku.core.model.SolutionStep
+import sudoku.app.model.CandidateHighlight
+import sudoku.app.model.Difficulty
+import sudoku.app.model.HighlightRole
+import sudoku.app.model.SolutionStep
 
 class GameViewModel(
     initialState: GameState = GameState(showNewGameDialog = true),
@@ -227,7 +227,7 @@ class GameViewModel(
         val s = clearHint(_state.value)
         if (s.isWon) return
         saveUndo()
-        val marks = computeAllCandidates(s.values)
+        val marks = NativeEngine.computeAllCandidates(s.values)
         _state.value =
             s.copy(
                 pencilMarks = marks,
@@ -267,76 +267,10 @@ class GameViewModel(
         val idx = row * 9 + col
         if (s.fixed[idx] || s.values[idx] != 0 || s.isWon) return
 
-        val candidates = effectiveCandidates(s.values, s.pencilMarks, idx)
-        if (candidates.isEmpty()) return
-
-        // Naked single: only one candidate
-        if (candidates.size == 1) {
-            placeDigit(s, idx, candidates.first())
-            return
+        val digit = NativeEngine.findSingleForCell(s.values, s.pencilMarks, idx)
+        if (digit != 0) {
+            placeDigit(s, idx, digit)
         }
-
-        // Hidden single: check if any candidate is unique in row, col, or block
-        for (digit in candidates) {
-            if (isHiddenSingle(s.values, s.pencilMarks, idx, digit)) {
-                placeDigit(s, idx, digit)
-                return
-            }
-        }
-        // No single found — do nothing
-    }
-
-    private fun isHiddenSingle(
-        values: IntArray,
-        pencilMarks: Array<out Set<Int>>,
-        idx: Int,
-        digit: Int,
-    ): Boolean {
-        val row = idx / 9
-        val col = idx % 9
-        val blockRow = (row / 3) * 3
-        val blockCol = (col / 3) * 3
-
-        // Check row: is digit a candidate in any other cell in this row?
-        var uniqueInRow = true
-        for (c in 0 until 9) {
-            val peer = row * 9 + c
-            if (peer == idx) continue
-            if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
-                uniqueInRow = false
-                break
-            }
-        }
-        if (uniqueInRow) return true
-
-        // Check col
-        var uniqueInCol = true
-        for (r in 0 until 9) {
-            val peer = r * 9 + col
-            if (peer == idx) continue
-            if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
-                uniqueInCol = false
-                break
-            }
-        }
-        if (uniqueInCol) return true
-
-        // Check block
-        var uniqueInBlock = true
-        for (r in blockRow until blockRow + 3) {
-            for (c in blockCol until blockCol + 3) {
-                val peer = r * 9 + c
-                if (peer == idx) continue
-                if (values[peer] == 0 && digit in effectiveCandidates(values, pencilMarks, peer)) {
-                    uniqueInBlock = false
-                    break
-                }
-            }
-            if (!uniqueInBlock) break
-        }
-        if (uniqueInBlock) return true
-
-        return false
     }
 
     private fun placeDigit(
@@ -470,7 +404,7 @@ class GameViewModel(
         when (s.hintLevel) {
             0 -> {
                 // Check for pencil mark errors first
-                val errors = findPencilMarkErrors(s)
+                val errors = NativeEngine.findPencilMarkErrors(s.values, s.pencilMarks, s.solution)
                 if (errors != null) {
                     pencilMarkErrors = errors
                     _state.value =

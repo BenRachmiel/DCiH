@@ -19,8 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import sudoku.core.model.BoardExample
-import sudoku.core.model.HighlightRole
+import sudoku.app.model.BoardExample
+import sudoku.app.model.HighlightRole
 
 /** Highlight role → color mapping, visible on both light and dark zinc themes. */
 private val roleColors = mapOf(

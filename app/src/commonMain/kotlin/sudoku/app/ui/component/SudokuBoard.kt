@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import sudoku.app.game.GameState
 import sudoku.app.game.computeCandidates
-import sudoku.core.model.HighlightRole
+import sudoku.app.model.HighlightRole
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 

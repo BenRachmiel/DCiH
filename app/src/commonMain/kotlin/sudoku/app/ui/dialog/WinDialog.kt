@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import sudoku.core.model.Difficulty
+import sudoku.app.model.Difficulty
 
 @Composable
 fun WinDialog(

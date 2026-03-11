@@ -1,9 +1,9 @@
 package sudoku.app.game
 
 import sudoku.app.engine.Buddies
+import sudoku.app.model.Difficulty
 import sudoku.core.model.Board
-import sudoku.core.model.Difficulty
-import sudoku.core.model.SolutionStep
+import sudoku.core.model.SolutionStep as CoreSolutionStep
 import sudoku.core.model.setAllExposedSingles
 import sudoku.core.solver.StepFinder
 import kotlin.test.*
@@ -38,7 +38,7 @@ class GameViewModelTest {
     }
 
     /** Advance past singles on a Board copy, returning the first non-single step found. */
-    private fun advancePastSingles(puzzleString: String): Pair<Board, SolutionStep>? {
+    private fun advancePastSingles(puzzleString: String): Pair<Board, CoreSolutionStep>? {
         val board = Board()
         board.loadFromString(puzzleString)
         val finder = StepFinder()

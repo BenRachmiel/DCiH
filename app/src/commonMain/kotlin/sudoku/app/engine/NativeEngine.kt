@@ -1,8 +1,11 @@
 package sudoku.app.engine
 
-import sudoku.core.model.CandidateHighlight
-import sudoku.core.model.Difficulty
-import sudoku.core.model.SolutionStep
+import sudoku.app.game.PencilMarkErrors
+import sudoku.app.model.BoardExample
+import sudoku.app.model.CandidateHighlight
+import sudoku.app.model.Difficulty
+import sudoku.app.model.SolutionStep
+import sudoku.app.model.SolutionType
 
 data class GenerateResult(
     val puzzle: String,
@@ -38,4 +41,12 @@ expect object NativeEngine {
         solution: IntArray,
         step: SolutionStep,
     ): List<CandidateHighlight>
+
+    fun generateExample(type: SolutionType, maxAttempts: Int): BoardExample?
+
+    fun computeAllCandidates(values: IntArray): Array<MutableSet<Int>>
+
+    fun findPencilMarkErrors(values: IntArray, pencilMarks: Array<out Set<Int>>, solution: IntArray): PencilMarkErrors?
+
+    fun findSingleForCell(values: IntArray, pencilMarks: Array<out Set<Int>>, cellIndex: Int): Int
 }

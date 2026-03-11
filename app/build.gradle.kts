@@ -26,7 +26,6 @@ kotlin {
         }
 
         commonMain.dependencies {
-            implementation(project(":core"))
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -35,6 +34,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
+            implementation(project(":core"))
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }

@@ -1,8 +1,8 @@
 package sudoku.app.game
 
-import sudoku.core.model.CandidateHighlight
-import sudoku.core.model.Difficulty
-import sudoku.core.model.SolutionStep
+import sudoku.app.model.CandidateHighlight
+import sudoku.app.model.Difficulty
+import sudoku.app.model.SolutionStep
 
 data class GameState(
     /** Cell values (0=empty, 1-9=set). Givens and user entries combined. */

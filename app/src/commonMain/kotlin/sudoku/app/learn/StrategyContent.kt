@@ -1,7 +1,7 @@
 package sudoku.app.learn
 
-import sudoku.core.model.*
-import sudoku.core.model.HighlightRole.*
+import sudoku.app.model.*
+import sudoku.app.model.HighlightRole.*
 
 /**
  * Strategy encyclopedia content — theory, spotting tips, and board examples for

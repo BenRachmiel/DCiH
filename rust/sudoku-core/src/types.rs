@@ -283,6 +283,42 @@ impl SolutionType {
         )
     }
 
+    pub const fn from_ordinal(ordinal: u8) -> Self {
+        match ordinal {
+            0 => SolutionType::FullHouse,
+            1 => SolutionType::NakedSingle,
+            2 => SolutionType::HiddenSingle,
+            3 => SolutionType::LockedCandidates1,
+            4 => SolutionType::LockedCandidates2,
+            5 => SolutionType::LockedPair,
+            6 => SolutionType::LockedTriple,
+            7 => SolutionType::NakedPair,
+            8 => SolutionType::NakedTriple,
+            9 => SolutionType::NakedQuadruple,
+            10 => SolutionType::HiddenPair,
+            11 => SolutionType::HiddenTriple,
+            12 => SolutionType::HiddenQuadruple,
+            13 => SolutionType::XWing,
+            14 => SolutionType::Swordfish,
+            15 => SolutionType::Jellyfish,
+            16 => SolutionType::Skyscraper,
+            17 => SolutionType::TwoStringKite,
+            18 => SolutionType::EmptyRectangle,
+            19 => SolutionType::TurbotFish,
+            20 => SolutionType::XyWing,
+            21 => SolutionType::XyzWing,
+            22 => SolutionType::WWing,
+            23 => SolutionType::RemotePair,
+            24 => SolutionType::SimpleColorsTrap,
+            25 => SolutionType::SimpleColorsWrap,
+            26 => SolutionType::MultiColors1,
+            27 => SolutionType::MultiColors2,
+            28 => SolutionType::XChain,
+            29 => SolutionType::XyChain,
+            _ => SolutionType::BruteForce,
+        }
+    }
+
     pub const fn has_solver(self) -> bool {
         matches!(
             self,

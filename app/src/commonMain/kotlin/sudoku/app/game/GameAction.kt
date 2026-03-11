@@ -1,6 +1,6 @@
 package sudoku.app.game
 
-import sudoku.core.model.Difficulty
+import sudoku.app.model.Difficulty
 
 sealed class GameAction {
     data class SelectCell(

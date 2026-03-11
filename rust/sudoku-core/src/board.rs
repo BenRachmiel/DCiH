@@ -325,6 +325,115 @@ impl Board {
     }
 }
 
+/// Compute candidate bitmasks for all 81 cells from values only.
+/// For each empty cell, eliminates digits seen in row/col/block peers.
+pub fn compute_all_candidates(values: &[u8; 81]) -> [u16; 81] {
+    let mut cands = [0u16; 81];
+    for i in 0..81 {
+        if values[i] != 0 {
+            continue;
+        }
+        let mut mask = MAX_MASK;
+        for &buddy in &BUDDIES_ARRAY[i] {
+            let v = values[buddy as usize];
+            if v != 0 {
+                mask &= !MASKS[v as usize];
+            }
+        }
+        cands[i] = mask;
+    }
+    cands
+}
+
+/// Find pencil mark errors: impossible candidates and missing solution digits.
+///
+/// Returns (to_remove, to_add) where:
+/// - to_remove: (cell, digit) pairs for candidates that conflict with placed peers
+/// - to_add: (cell, digit) pairs for solution digits missing from candidates
+///
+/// Returns None if no errors found.
+pub fn find_pencil_mark_errors(
+    values: &[u8; 81],
+    cand_masks: &[u16; 81],
+    solution: &[u8; 81],
+) -> Option<(Vec<(usize, u8)>, Vec<(usize, u8)>)> {
+    let valid = compute_all_candidates(values);
+    let mut to_remove = Vec::new();
+    let mut to_add = Vec::new();
+
+    for i in 0..81 {
+        if values[i] != 0 || cand_masks[i] == 0 {
+            continue;
+        }
+
+        // Check for impossible candidates (set in user marks but not valid)
+        let impossible = cand_masks[i] & !valid[i];
+        if impossible != 0 {
+            let pv = &POSSIBLE_VALUES[impossible as usize];
+            for j in 0..pv.count as usize {
+                to_remove.push((i, pv.digits[j]));
+            }
+        }
+
+        // Check for missing solution digit
+        if solution[i] != 0 {
+            let sol_mask = MASKS[solution[i] as usize];
+            if cand_masks[i] & sol_mask == 0 {
+                to_add.push((i, solution[i]));
+            }
+        }
+    }
+
+    if to_remove.is_empty() && to_add.is_empty() {
+        None
+    } else {
+        Some((to_remove, to_add))
+    }
+}
+
+/// Find a naked or hidden single for a specific cell.
+///
+/// Returns the digit (1-9) if the cell has exactly one candidate (naked single)
+/// or if a candidate is unique within a row/col/block (hidden single).
+/// Returns 0 if no single found.
+pub fn find_single_for_cell(values: &[u8; 81], cand_masks: &[u16; 81], cell: usize) -> u8 {
+    if values[cell] != 0 || cand_masks[cell] == 0 {
+        return 0;
+    }
+
+    // Naked single: exactly one candidate
+    if ANZ_VALUES[cand_masks[cell] as usize] == 1 {
+        return CAND_FROM_MASK[cand_masks[cell] as usize];
+    }
+
+    // Hidden single: check each candidate against row, col, block
+    let pv = &POSSIBLE_VALUES[cand_masks[cell] as usize];
+    for ci in 0..pv.count as usize {
+        let digit = pv.digits[ci];
+        let mask = MASKS[digit as usize];
+
+        // Check all 3 constraints (row, col, block)
+        for &constraint in &CONSTRAINTS[cell] {
+            let mut unique = true;
+            for &peer in &ALL_UNITS[constraint as usize] {
+                let pi = peer as usize;
+                if pi == cell {
+                    continue;
+                }
+                if values[pi] == 0 && cand_masks[pi] & mask != 0 {
+                    unique = false;
+                    break;
+                }
+            }
+            if unique {
+                return digit;
+            }
+        }
+    }
+
+    0
+}
+
 impl Default for Board {
     fn default() -> Self {
         Self::new()

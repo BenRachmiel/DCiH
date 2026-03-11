@@ -30,11 +30,11 @@ import sudoku.app.learn.searchStrategies
 import sudoku.app.learn.strategyEntries
 import sudoku.app.ui.PlatformBackHandler
 import sudoku.app.ui.component.ExampleBoard
-import sudoku.core.model.BoardExample
-import sudoku.core.model.HighlightRole
-import sudoku.core.model.SolutionType
-import sudoku.core.model.StrategyCategory
-import sudoku.core.model.StrategyEntry
+import sudoku.app.model.BoardExample
+import sudoku.app.model.HighlightRole
+import sudoku.app.model.SolutionType
+import sudoku.app.model.StrategyCategory
+import sudoku.app.model.StrategyEntry
 
 @Composable
 fun LearnScreen(

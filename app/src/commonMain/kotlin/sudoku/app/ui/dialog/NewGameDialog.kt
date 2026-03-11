@@ -7,8 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import sudoku.core.model.Difficulty
-import sudoku.core.model.SolutionType
+import sudoku.app.model.Difficulty
+import sudoku.app.model.SolutionType
 
 @Composable
 fun NewGameDialog(

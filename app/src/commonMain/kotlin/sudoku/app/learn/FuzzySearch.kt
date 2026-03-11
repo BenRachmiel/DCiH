@@ -1,6 +1,6 @@
 package sudoku.app.learn
 
-import sudoku.core.model.StrategyEntry
+import sudoku.app.model.StrategyEntry
 
 /**
  * Fuzzy substring matching for strategy search.

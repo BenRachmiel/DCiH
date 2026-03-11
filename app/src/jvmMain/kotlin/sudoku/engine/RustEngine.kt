@@ -1,10 +1,10 @@
 package sudoku.engine
 
-import sudoku.core.model.CandidateHighlight
-import sudoku.core.model.Difficulty
-import sudoku.core.model.HighlightRole
-import sudoku.core.model.SolutionStep
-import sudoku.core.model.SolutionType
+import sudoku.app.model.CandidateHighlight
+import sudoku.app.model.Difficulty
+import sudoku.app.model.HighlightRole
+import sudoku.app.model.SolutionStep
+import sudoku.app.model.SolutionType
 
 /**
  * JNI bridge to the Rust sudoku-core engine.
@@ -64,6 +64,26 @@ object RustEngine {
         return parseHighlights(json)
     }
 
+    fun generateExample(typeOrdinal: Int, maxAttempts: Int): String {
+        ensureLoaded()
+        return nativeGenerateExample(typeOrdinal, maxAttempts)
+    }
+
+    fun computeAllCandidates(values: ByteArray): ShortArray {
+        ensureLoaded()
+        return nativeComputeAllCandidates(values)
+    }
+
+    fun findPencilMarkErrors(values: ByteArray, candMasks: ShortArray, solution: ByteArray): String {
+        ensureLoaded()
+        return nativeFindPencilMarkErrors(values, candMasks, solution)
+    }
+
+    fun findSingleForCell(values: ByteArray, candMasks: ShortArray, cellIndex: Int): Int {
+        ensureLoaded()
+        return nativeFindSingleForCell(values, candMasks, cellIndex)
+    }
+
     // ─── JNI declarations ───────────────────────────────────────────────────
 
     @JvmStatic
@@ -95,6 +115,18 @@ object RustEngine {
 
     @JvmStatic
     private external fun nativeCountSolutions(values: ByteArray, maxCount: Int): Int
+
+    @JvmStatic
+    private external fun nativeGenerateExample(typeOrdinal: Int, maxAttempts: Int): String
+
+    @JvmStatic
+    private external fun nativeComputeAllCandidates(values: ByteArray): ShortArray
+
+    @JvmStatic
+    private external fun nativeFindPencilMarkErrors(values: ByteArray, candMasks: ShortArray, solution: ByteArray): String
+
+    @JvmStatic
+    private external fun nativeFindSingleForCell(values: ByteArray, candMasks: ShortArray, cellIndex: Int): Int
 
     // ─── JSON marshalling ───────────────────────────────────────────────────
 
@@ -227,6 +259,51 @@ object RustEngine {
             append("[$cell,$digit]")
         }
         append("]}")
+    }
+
+    fun parseBoardExampleResult(json: String): Triple<String, IntArray, List<CandidateHighlight>>? {
+        if (json.isEmpty()) return null
+        val puzzle = extractString(json, "puzzle")
+        val highlights = parseHighlights(
+            json.substring(json.indexOf("\"highlights\":[") + 14).let { sub ->
+                val depth = IntArray(1)
+                var end = 0
+                // Find the highlights array by tracking brackets from the start
+                val fullMarker = "\"highlights\":["
+                val hStart = json.indexOf(fullMarker)
+                if (hStart < 0) return@let "[]"
+                val arrStart = hStart + fullMarker.length - 1
+                var d = 0
+                for (i in arrStart until json.length) {
+                    when (json[i]) {
+                        '[' -> d++
+                        ']' -> { d--; if (d == 0) { end = i; break } }
+                    }
+                }
+                json.substring(arrStart, end + 1)
+            },
+        )
+        // Parse candidateMasks array
+        val masksMarker = "\"candidateMasks\":["
+        val masksStart = json.indexOf(masksMarker)
+        val candidateMasks = if (masksStart >= 0) {
+            val arrStart = masksStart + masksMarker.length
+            val arrEnd = json.indexOf(']', arrStart)
+            json.substring(arrStart, arrEnd)
+                .split(',')
+                .map { it.trim().toInt() }
+                .toIntArray()
+        } else {
+            IntArray(81)
+        }
+        return Triple(puzzle, candidateMasks, highlights)
+    }
+
+    fun parsePencilMarkErrors(json: String): Pair<List<Pair<Int, Int>>, List<Pair<Int, Int>>>? {
+        if (json.isEmpty()) return null
+        val toRemove = extractPairArray(json, "toRemove")
+        val toAdd = extractPairArray(json, "toAdd")
+        return toRemove to toAdd
     }
 
     // ─── Minimal JSON helpers ───────────────────────────────────────────────
