@@ -60,7 +60,7 @@ fun ExampleBoard(
             if (ch in '1'..'9') ch - '0' else 0
         }
     }
-    val candidates = remember(example) { example.resolvedCandidates() }
+    val candidates = example.candidateMasks
 
     // Pre-build highlight lookup: key = cellIndex * 10 + digit → role
     val highlightMap = remember(example.highlights) {

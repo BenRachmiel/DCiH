@@ -214,11 +214,6 @@ private fun StrategyListItem(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                text = entry.type.score.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -294,21 +289,11 @@ private fun DetailView(
 
             Spacer(Modifier.height(8.dp))
 
-            // Category chip + score
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(entry.type.category.displayName) },
-                )
-                Text(
-                    text = "Score: ${entry.type.score}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // Category chip
+            AssistChip(
+                onClick = {},
+                label = { Text(entry.type.category.displayName) },
+            )
 
             Spacer(Modifier.height(16.dp))
 
