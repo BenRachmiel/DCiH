@@ -36,19 +36,50 @@ Pull requests would be sick! It would be really fun to work with others on somet
 | Android SDK           | API 36  | `compileSdk 36`, `buildToolsVersion 36.1.0`                   |
 | Kotlin                | 2.2.20  | Managed by Gradle version catalog                             |
 | Android Gradle Plugin | 9.0.1   | Managed by Gradle version catalog                             |
+| Rust                  | 1.94+   | Stable toolchain; needed to build the native engine           |
 
 You need the Android SDK installed with API level 36 and build tools 36.1.0. The easiest way to get this is through [Android Studio](https://developer.android.com/studio), but you can also install the [command-line tools](https://developer.android.com/studio#command-line-tools-only) standalone. Set `ANDROID_HOME` to point at your SDK root.
+
+### Rust engine
+
+All solver, generator, and board logic lives in a Rust crate (`rust/sudoku-core`). The compiled native library is gitignored — you must build it from source before running the app.
+
+```bash
+cd rust/sudoku-core
+cargo build --release --features uniffi
+```
+
+Then copy the library to where the Gradle build expects it:
+
+```bash
+# Desktop (Linux)
+cp target/release/libsudoku_core.so ../../app/src/desktopMain/resources/native/
+
+# Desktop (macOS)
+cp target/release/libsudoku_core.dylib ../../app/src/desktopMain/resources/native/
+```
+
+For Android, use `cargo-ndk`:
+
+```bash
+cargo ndk --target aarch64-linux-android --target x86_64-linux-android \
+    --platform 24 build --release --features uniffi
+```
+
+Or use the convenience scripts: `rust/build-desktop.sh` and `rust/build-android.sh`.
+
+The UniFFI-generated Kotlin bindings (`app/src/jvmMain/kotlin/sudoku/engine/uniffi/sudoku_core.kt`) are checked into the repo. Regenerate only when the FFI surface (`ffi/uniffi_api.rs`) changes:
+
+```bash
+cargo run --features "uniffi/cli,uniffi" --bin uniffi-bindgen -- \
+  generate --library target/release/libsudoku_core.so \
+  --language kotlin --out-dir ../../app/src/jvmMain/kotlin/
+```
 
 ### Desktop (JVM)
 
 ```bash
 ./gradlew :app:run
-```
-
-### Web (Wasm) — experimental
-
-```bash
-./gradlew :app:wasmJsBrowserDevelopmentRun
 ```
 
 ### Android
@@ -69,18 +100,18 @@ The APK lands at `app/build/outputs/apk/debug/app-debug.apk` if you want to side
 ### Running tests
 
 ```bash
-./gradlew :core:allTests                  # Core engine tests (JVM + Android)
-./gradlew :app:desktopTest :app:testDebugUnitTest  # App tests (JVM + Android)
+cd rust/sudoku-core && cargo test --all-targets   # Rust engine tests
+./gradlew :app:desktopTest :app:testDebugUnitTest # App tests (JVM + Android)
 ```
 
 ## Project structure
 
 ```
 android-sudoku/
-├── core/          Pure Kotlin engine — board model, solver, generator
-├── app/           Compose Multiplatform UI — screens, components, view model
-├── Hodoku/        Reference: original HoDoKu solver source
-└── obsidian/      Living project documentation (Obsidian vault)
+├── rust/sudoku-core/  Rust engine — board model, solver, generator, UniFFI bridge
+├── app/               Compose Multiplatform UI — screens, components, view model
+├── Hodoku/            Reference: original HoDoKu solver source
+└── obsidian/          Living project documentation (Obsidian vault)
 ```
 
 ## License

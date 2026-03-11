@@ -1,11 +1,9 @@
 package sudoku.app.game
 
 import sudoku.app.engine.Buddies
+import sudoku.app.engine.NativeEngine
 import sudoku.app.model.Difficulty
-import sudoku.core.model.Board
-import sudoku.core.model.SolutionStep as CoreSolutionStep
-import sudoku.core.model.setAllExposedSingles
-import sudoku.core.solver.StepFinder
+import sudoku.app.model.SolutionStep
 import kotlin.test.*
 
 class GameViewModelTest {
@@ -37,17 +35,50 @@ class GameViewModelTest {
         )
     }
 
-    /** Advance past singles on a Board copy, returning the first non-single step found. */
-    private fun advancePastSingles(puzzleString: String): Pair<Board, CoreSolutionStep>? {
-        val board = Board()
-        board.loadFromString(puzzleString)
-        val finder = StepFinder()
-        while (true) {
-            val step = finder.findNextStep(board) ?: return null
-            if (!step.type.isSingle) return board to step
-            board.setCell(step.cellIndex, step.value)
-            board.setAllExposedSingles()
+    private fun parseValues(puzzleString: String): IntArray =
+        IntArray(81) { i ->
+            val ch = puzzleString[i]
+            if (ch in '1'..'9') ch - '0' else 0
         }
+
+    /** Advance past singles, returning the board values and first non-single step. */
+    private fun advancePastSingles(puzzleString: String): Pair<IntArray, SolutionStep>? {
+        NativeEngine.ensureLoaded()
+        val values = parseValues(puzzleString)
+        val emptySolution = IntArray(81)
+        val marks = NativeEngine.computeAllCandidates(values)
+        while (true) {
+            val step = NativeEngine.findNextStep(values, marks, emptySolution, null) ?: return null
+            if (!step.type.isSingle) return values to step
+            values[step.cellIndex] = step.value
+            marks[step.cellIndex].clear()
+            for (buddy in Buddies.ARRAY[step.cellIndex]) {
+                marks[buddy].remove(step.value)
+            }
+        }
+    }
+
+    /** Solve a puzzle completely, returning the solution values. */
+    private fun solveCompletely(puzzleString: String): IntArray {
+        NativeEngine.ensureLoaded()
+        val values = parseValues(puzzleString)
+        val emptySolution = IntArray(81)
+        val marks = NativeEngine.computeAllCandidates(values)
+        var iterations = 0
+        while (values.any { it == 0 } && iterations++ < 500) {
+            val step = NativeEngine.findNextStep(values, marks, emptySolution, null) ?: break
+            if (step.value != 0 && step.cellIndex >= 0) {
+                values[step.cellIndex] = step.value
+                marks[step.cellIndex].clear()
+                for (buddy in Buddies.ARRAY[step.cellIndex]) {
+                    marks[buddy].remove(step.value)
+                }
+            }
+            for ((cell, digit) in step.candidatesRemoved) {
+                marks[cell].remove(digit)
+            }
+        }
+        return values
     }
 
     // --- Existing tests ---
@@ -163,7 +194,7 @@ class GameViewModelTest {
         var targetDigit = 0
         var removeFromIdx = -1
 
-        for (unit in Board.ALL_UNITS) {
+        for (unit in Buddies.ALL_UNITS) {
             for (digit in 1..9) {
                 val cellsWithDigit =
                     unit.filter { i ->
@@ -205,10 +236,10 @@ class GameViewModelTest {
     fun testHintEliminationIsEffective() {
         // Advance past singles to get a state where first hint is an elimination
         val result = advancePastSingles(hardPuzzle) ?: return
-        val (board, firstStep) = result
+        val (boardValues, firstStep) = result
 
         // Build a GameState matching this board position
-        val values = board.values.copyOf()
+        val values = boardValues.copyOf()
         val fixed = BooleanArray(81)
         for (i in hardPuzzle.indices) {
             if (hardPuzzle[i] in '1'..'9') fixed[i] = true
@@ -259,11 +290,11 @@ class GameViewModelTest {
     fun testHintExecutionPopulatesPencilMarks() {
         // Advance past singles to find an elimination step
         val result = advancePastSingles(hardPuzzle) ?: return
-        val (board, step) = result
+        val (boardValues, step) = result
         if (step.type.isSingle || step.candidatesRemoved.isEmpty()) return
 
         // Build GameState with NO pencil marks filled
-        val values = board.values.copyOf()
+        val values = boardValues.copyOf()
         val fixed = BooleanArray(81)
         for (i in hardPuzzle.indices) {
             if (hardPuzzle[i] in '1'..'9') fixed[i] = true
@@ -356,26 +387,7 @@ class GameViewModelTest {
 
     @Test
     fun testHintDetectsMissingSolutionDigit() {
-        // We need a puzzle with a known solution
-        val board = Board()
-        board.loadFromString(hardPuzzle)
-        // Solve completely to get solution
-        val solverBoard = Board()
-        solverBoard.loadFromString(hardPuzzle)
-        val finder = StepFinder()
-        while (!solverBoard.isSolved) {
-            val step = finder.findNextStep(solverBoard) ?: break
-            if (step.type.isSingle) {
-                solverBoard.setCell(step.cellIndex, step.value)
-                solverBoard.setAllExposedSingles()
-            } else {
-                for ((cell, digit) in step.candidatesRemoved) {
-                    solverBoard.setCandidate(cell, digit, false)
-                }
-                solverBoard.setAllExposedSingles()
-            }
-        }
-        val solution = solverBoard.values.copyOf()
+        val solution = solveCompletely(hardPuzzle)
 
         val state = createGameState(hardPuzzle, solution)
         val vm = GameViewModel(state)
@@ -415,23 +427,7 @@ class GameViewModelTest {
 
     @Test
     fun testHintFixesAllPencilMarkErrors() {
-        // Build a state with known solution
-        val solverBoard = Board()
-        solverBoard.loadFromString(hardPuzzle)
-        val finder = StepFinder()
-        while (!solverBoard.isSolved) {
-            val step = finder.findNextStep(solverBoard) ?: break
-            if (step.type.isSingle) {
-                solverBoard.setCell(step.cellIndex, step.value)
-                solverBoard.setAllExposedSingles()
-            } else {
-                for ((cell, digit) in step.candidatesRemoved) {
-                    solverBoard.setCandidate(cell, digit, false)
-                }
-                solverBoard.setAllExposedSingles()
-            }
-        }
-        val solution = solverBoard.values.copyOf()
+        val solution = solveCompletely(hardPuzzle)
 
         val state = createGameState(hardPuzzle, solution)
         val vm = GameViewModel(state)

@@ -19,6 +19,9 @@ rand = "0.9"
 name = "uniffi-bindgen"
 required-features = ["uniffi/cli"]
 
+[[bin]]
+name = "generate-examples"
+
 [dev-dependencies]
 criterion = "0.5"
 

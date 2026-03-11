@@ -15,5 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "android-sudoku"
 
-include(":core")
 include(":app")

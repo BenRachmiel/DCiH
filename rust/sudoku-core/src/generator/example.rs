@@ -3,9 +3,8 @@ use serde::Serialize;
 use crate::board::Board;
 use crate::generator::highlighter::build_highlights;
 use crate::generator::Generator;
-use crate::solver::{SolverOrchestrator, StepFinder};
+use crate::solver::SolverOrchestrator;
 use crate::step::CandidateHighlight;
-use crate::tables::ANZ_VALUES;
 use crate::types::{Difficulty, SolutionType};
 
 #[derive(Debug, Clone, Serialize)]
@@ -27,7 +26,6 @@ pub fn generate_example(
     let target_diff = target_type.difficulty();
     let mut generator = Generator::new();
     let orchestrator = SolverOrchestrator::new();
-    let finder = StepFinder::new();
     let threshold = completeness_threshold(target_type);
 
     for _ in 0..max_attempts {
