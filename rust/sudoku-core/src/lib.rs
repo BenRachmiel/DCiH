@@ -7,5 +7,8 @@ pub mod types;
 
 pub mod solver;
 pub mod generator;
-#[cfg(feature = "jni")]
+#[cfg(feature = "uniffi")]
 pub mod ffi;
+
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!();

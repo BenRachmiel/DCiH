@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Difficulty tiers with score thresholds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum Difficulty {
     Easy,
     Medium,
@@ -98,6 +99,7 @@ impl StrategyCategory {
 
 /// All 31 solving technique types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum SolutionType {
     FullHouse,
     NakedSingle,
@@ -353,6 +355,7 @@ impl SolutionType {
 
 /// Semantic role for per-candidate highlighting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum HighlightRole {
     Defining,
     Elimination,

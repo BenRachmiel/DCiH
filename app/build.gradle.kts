@@ -23,6 +23,9 @@ kotlin {
         // Intermediate JVM source set shared by Android and Desktop
         val jvmMain by creating {
             dependsOn(commonMain.get())
+            dependencies {
+                implementation("net.java.dev.jna:jna:5.17.0")
+            }
         }
 
         commonMain.dependencies {
