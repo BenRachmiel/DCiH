@@ -104,6 +104,19 @@ cd rust/sudoku-core && cargo test --all-targets   # Rust engine tests
 ./gradlew :app:desktopTest :app:testDebugUnitTest # App tests (JVM + Android)
 ```
 
+## Benchmarking
+
+The `benchmark` binary tests the solver against external puzzle datasets for correctness, difficulty correlation, and technique coverage.
+
+```bash
+cd rust/sudoku-core
+cargo run --release --bin benchmark -- <csv-path> [--limit N] [--sample N]
+```
+
+We use the [3 Million Sudoku Puzzles with Ratings](https://www.kaggle.com/datasets/radcliffe/3-million-sudoku-puzzles-with-ratings) dataset from Kaggle. Download the zip, extract `sudoku-3m.csv` into the repo root (gitignored). CSV format: `id,puzzle,solution,clues,difficulty`.
+
+The benchmark reports correctness (solver output vs known solutions), solve rate, technique usage counts, difficulty correlation (Kaggle rating vs our scoring), and throughput. Use `--limit N` to cap puzzles or `--sample N` to solve every Nth.
+
 ## Project structure
 
 ```
