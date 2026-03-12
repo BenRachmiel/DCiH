@@ -81,8 +81,9 @@ enum class SolutionType(
                 HIDDEN_PAIR, HIDDEN_TRIPLE, HIDDEN_QUADRUPLE,
                 X_WING, SWORDFISH, JELLYFISH,
                 SKYSCRAPER, TWO_STRING_KITE, EMPTY_RECTANGLE, TURBOT_FISH,
-                XY_WING, XYZ_WING, W_WING,
+                XY_WING, XYZ_WING, W_WING, REMOTE_PAIR,
                 SIMPLE_COLORS_TRAP, SIMPLE_COLORS_WRAP,
+                MULTI_COLORS_1, MULTI_COLORS_2,
                 -> true
 
                 else -> false

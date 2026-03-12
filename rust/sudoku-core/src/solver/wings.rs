@@ -19,6 +19,9 @@ impl Solver for WingSolver {
         if let Some(s) = find_w_wing(board) {
             steps.push(s);
         }
+        if let Some(s) = find_remote_pair(board) {
+            steps.push(s);
+        }
         steps
     }
 }
@@ -295,6 +298,91 @@ fn try_w_wing_link(
                     link_digit,
                     elims,
                 ));
+            }
+        }
+    }
+    None
+}
+
+/// Remote Pair: chain of 4+ bivalue cells (even length) all with the same {a,b} pair,
+/// consecutive cells are buddies. Cells seeing both endpoints can have a and b eliminated.
+fn find_remote_pair(board: &Board) -> Option<SolutionStep> {
+    let mut by_mask: std::collections::HashMap<u16, Vec<usize>> = std::collections::HashMap::new();
+    for i in 0..81 {
+        let mask = board.candidates[i];
+        if mask != 0 && ANZ_VALUES[mask as usize] == 2 {
+            by_mask.entry(mask).or_default().push(i);
+        }
+    }
+
+    for (&mask, cells) in &by_mask {
+        if cells.len() < 4 {
+            continue;
+        }
+
+        let pv = &POSSIBLE_VALUES[mask as usize];
+        let a = pv.digits[0];
+        let b = pv.digits[1];
+
+        // Build adjacency: which cells in this group are buddies
+        let n = cells.len();
+        let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n];
+        for i in 0..n {
+            for j in (i + 1)..n {
+                if BUDDIES_ARRAY[cells[i]].contains(&(cells[j] as u8)) {
+                    adj[i].push(j);
+                    adj[j].push(i);
+                }
+            }
+        }
+
+        // DFS from each cell to find even-length chains >= 4 with eliminations
+        for start in 0..n {
+            let mut stack: Vec<(usize, Vec<usize>)> = vec![(start, vec![start])];
+            while let Some((current, chain)) = stack.pop() {
+                if chain.len() >= 4 && chain.len() % 2 == 0 {
+                    let first = cells[chain[0]];
+                    let last = cells[*chain.last().unwrap()];
+
+                    let mut elims = Vec::new();
+                    for &buddy in &BUDDIES_ARRAY[first] {
+                        let bi = buddy as usize;
+                        if bi == last || chain.iter().any(|&ci| cells[ci] == bi) {
+                            continue;
+                        }
+                        if BUDDIES_ARRAY[last].contains(&buddy) {
+                            if board.is_candidate(bi, a) {
+                                elims.push((bi, a));
+                            }
+                            if board.is_candidate(bi, b) {
+                                elims.push((bi, b));
+                            }
+                        }
+                    }
+
+                    if !elims.is_empty() {
+                        let indices: Vec<usize> = chain.iter().map(|&ci| cells[ci]).collect();
+                        return Some(SolutionStep::elimination(
+                            SolutionType::RemotePair,
+                            indices,
+                            a,
+                            elims,
+                        ));
+                    }
+                }
+
+                // Cap chain length to avoid combinatorial explosion
+                if chain.len() >= 8 {
+                    continue;
+                }
+
+                for &next in &adj[current] {
+                    if !chain.contains(&next) {
+                        let mut new_chain = chain.clone();
+                        new_chain.push(next);
+                        stack.push((next, new_chain));
+                    }
+                }
             }
         }
     }

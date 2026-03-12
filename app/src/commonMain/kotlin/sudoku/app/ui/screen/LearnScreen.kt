@@ -239,6 +239,7 @@ private fun DetailView(
     val scope = rememberCoroutineScope()
     val generatedExamples by ExampleCache.examples.collectAsState()
     val generatingType by ExampleCache.generating.collectAsState()
+    val lastFailed by ExampleCache.lastFailed.collectAsState()
     val resolvedExample: BoardExample? = generatedExamples[entry.type] ?: entry.example
 
     val entryIndex = remember(entry.type) { allEntries.indexOfFirst { it.type == entry.type } }
@@ -310,10 +311,24 @@ private fun DetailView(
                 }
                 if (entry.type.hasSolver) {
                     val isGenerating = generatingType == entry.type
-                    Box(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd,
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (isGenerating) {
+                            Text(
+                                "Generating...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else if (lastFailed) {
+                            Text(
+                                "Could not find example. Try again?",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                         IconButton(
                             onClick = { ExampleCache.regenerate(entry.type, scope) },
                             enabled = !isGenerating,

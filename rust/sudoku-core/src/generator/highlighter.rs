@@ -168,6 +168,15 @@ pub fn build_highlights(board: &Board, step: &SolutionStep) -> Vec<CandidateHigh
             highlights
         }
 
+        SolutionType::RemotePair => {
+            let mut highlights = Vec::new();
+            for &idx in &step.indices {
+                add_cell_candidates(&mut highlights, board, idx, HighlightRole::Defining);
+            }
+            add_eliminations(&mut highlights, step);
+            highlights
+        }
+
         SolutionType::WWing => {
             let mut highlights = Vec::new();
             if step.indices.len() >= 2 {
@@ -210,6 +219,27 @@ pub fn build_highlights(board: &Board, step: &SolutionStep) -> Vec<CandidateHigh
                     });
                 }
             }
+            highlights
+        }
+
+        SolutionType::MultiColors1 | SolutionType::MultiColors2 => {
+            // Indices: cells from two clusters. Use ColorA/ColorB for alternating clusters.
+            // The elimination cells get Elimination role.
+            let mut highlights = Vec::new();
+            let elim_cells: Vec<usize> = step.candidates_removed.iter().map(|&(c, _)| c).collect();
+            for &idx in &step.indices {
+                let role = if elim_cells.contains(&idx) {
+                    HighlightRole::ColorB
+                } else {
+                    HighlightRole::ColorA
+                };
+                highlights.push(CandidateHighlight {
+                    cell_index: idx,
+                    value: step.value,
+                    role,
+                });
+            }
+            add_eliminations(&mut highlights, step);
             highlights
         }
 

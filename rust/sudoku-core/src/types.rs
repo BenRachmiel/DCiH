@@ -339,6 +339,9 @@ impl SolutionType {
                 | SolutionType::WWing
                 | SolutionType::SimpleColorsTrap
                 | SolutionType::SimpleColorsWrap
+                | SolutionType::MultiColors1
+                | SolutionType::MultiColors2
+                | SolutionType::RemotePair
         )
     }
 }
