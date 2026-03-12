@@ -123,21 +123,107 @@ data class SolutionStep(
     /** Vague hint: just the technique name. */
     fun describeVague(): String = type.displayName
 
-    /** Concrete hint: technique name + relevant cells/digits. */
+    /** Concrete hint: technique name + relevant cells/digits/location. */
     fun describeConcrete(): String {
-        if (type.isSingle) {
-            val r = cellIndex / 9 + 1
-            val c = cellIndex % 9 + 1
-            return "${type.displayName}: $value in r${r}c$c"
-        }
-        val digits = candidatesRemoved.map { it.second }.distinct().sorted()
-        val digitStr = digits.joinToString(",")
-        return if (value != 0) {
-            "${type.displayName}: digit $value"
-        } else if (digits.isNotEmpty()) {
-            "${type.displayName}: digits $digitStr"
-        } else {
-            type.displayName
+        fun cellRef(idx: Int) = "r${idx / 9 + 1}c${idx % 9 + 1}"
+        fun boxOf(idx: Int) = (idx / 9 / 3) * 3 + (idx % 9 / 3) + 1
+
+        return when (type) {
+            SolutionType.FULL_HOUSE, SolutionType.NAKED_SINGLE, SolutionType.HIDDEN_SINGLE -> {
+                "${type.displayName}: $value in ${cellRef(cellIndex)}"
+            }
+
+            SolutionType.LOCKED_CANDIDATES_1, SolutionType.LOCKED_CANDIDATES_2 -> {
+                val box = if (indices.isNotEmpty()) boxOf(indices[0]) else 0
+                "${type.displayName}: digit $value in box $box"
+            }
+
+            SolutionType.LOCKED_PAIR, SolutionType.LOCKED_TRIPLE -> {
+                val cells = indices.joinToString(",") { cellRef(it) }
+                "${type.displayName}: $cells"
+            }
+
+            SolutionType.NAKED_PAIR, SolutionType.NAKED_TRIPLE, SolutionType.NAKED_QUADRUPLE -> {
+                val digits = candidatesRemoved.map { it.second }.distinct().sorted()
+                val cells = indices.joinToString(",") { cellRef(it) }
+                "${type.displayName}: {${digits.joinToString(",")}} in $cells"
+            }
+
+            SolutionType.HIDDEN_PAIR, SolutionType.HIDDEN_TRIPLE, SolutionType.HIDDEN_QUADRUPLE -> {
+                val cells = indices.joinToString(",") { cellRef(it) }
+                "${type.displayName}: in $cells"
+            }
+
+            SolutionType.X_WING, SolutionType.SWORDFISH, SolutionType.JELLYFISH -> {
+                val rows = indices.map { it / 9 + 1 }.distinct().sorted()
+                val cols = indices.map { it % 9 + 1 }.distinct().sorted()
+                "${type.displayName}: digit $value in r${rows.joinToString(",")}/c${cols.joinToString(",")}"
+            }
+
+            SolutionType.SKYSCRAPER, SolutionType.TWO_STRING_KITE, SolutionType.TURBOT_FISH -> {
+                if (indices.size == 4) {
+                    "${type.displayName}: digit $value, ends ${cellRef(indices[0])},${cellRef(indices[3])}"
+                } else {
+                    "${type.displayName}: digit $value"
+                }
+            }
+
+            SolutionType.EMPTY_RECTANGLE -> {
+                if (indices.size > 2) {
+                    val box = boxOf(indices[2])
+                    "${type.displayName}: digit $value in box $box"
+                } else {
+                    "${type.displayName}: digit $value"
+                }
+            }
+
+            SolutionType.XY_WING, SolutionType.XYZ_WING -> {
+                if (indices.isNotEmpty()) {
+                    "${type.displayName}: pivot ${cellRef(indices[0])}"
+                } else {
+                    type.displayName
+                }
+            }
+
+            SolutionType.W_WING -> {
+                if (indices.size >= 2) {
+                    "${type.displayName}: ${cellRef(indices[0])},${cellRef(indices[1])}"
+                } else {
+                    type.displayName
+                }
+            }
+
+            SolutionType.REMOTE_PAIR -> {
+                val digits = candidatesRemoved.map { it.second }.distinct().sorted()
+                "${type.displayName}: {${digits.joinToString(",")}} chain of ${indices.size}"
+            }
+
+            SolutionType.SIMPLE_COLORS_TRAP -> {
+                val elimCell = candidatesRemoved.firstOrNull()?.first
+                if (elimCell != null) {
+                    "${type.displayName}: digit $value, ${cellRef(elimCell)} sees both colors"
+                } else {
+                    "${type.displayName}: digit $value"
+                }
+            }
+
+            SolutionType.SIMPLE_COLORS_WRAP -> {
+                "${type.displayName}: digit $value, color contradicts itself"
+            }
+
+            SolutionType.MULTI_COLORS_1, SolutionType.MULTI_COLORS_2 -> {
+                "${type.displayName}: digit $value, ${candidatesRemoved.size} eliminations"
+            }
+
+            SolutionType.BRUTE_FORCE -> {
+                if (cellIndex >= 0) {
+                    "${type.displayName}: $value in ${cellRef(cellIndex)}"
+                } else {
+                    type.displayName
+                }
+            }
+
+            else -> type.displayName
         }
     }
 }

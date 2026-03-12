@@ -70,14 +70,15 @@ pub fn build_highlights(board: &Board, step: &SolutionStep) -> Vec<CandidateHigh
         | SolutionType::HiddenTriple
         | SolutionType::HiddenQuadruple => {
             let mut highlights = Vec::new();
-            let kept_digits: Vec<u8> = step
+            let removed_digits: Vec<u8> = step
                 .candidates_removed
                 .iter()
                 .map(|&(_, d)| d)
                 .collect();
+            // The hidden digits (those NOT being removed) are the core pattern
             for &idx in &step.indices {
                 for d in 1..=9u8 {
-                    if board.is_candidate(idx, d) && !kept_digits.contains(&d) {
+                    if board.is_candidate(idx, d) && !removed_digits.contains(&d) {
                         highlights.push(CandidateHighlight {
                             cell_index: idx,
                             value: d,
@@ -134,21 +135,23 @@ pub fn build_highlights(board: &Board, step: &SolutionStep) -> Vec<CandidateHigh
         SolutionType::EmptyRectangle => {
             let mut highlights = Vec::new();
             if step.indices.len() >= 2 {
+                // indices[0..2] = strong link endpoints, indices[2..] = ER box cells
+                // The box cells are the core pattern; strong link provides the logic
                 highlights.push(CandidateHighlight {
                     cell_index: step.indices[0],
                     value: step.value,
-                    role: HighlightRole::Defining,
+                    role: HighlightRole::Secondary,
                 });
                 highlights.push(CandidateHighlight {
                     cell_index: step.indices[1],
                     value: step.value,
-                    role: HighlightRole::Defining,
+                    role: HighlightRole::Secondary,
                 });
                 for &idx in &step.indices[2..] {
                     highlights.push(CandidateHighlight {
                         cell_index: idx,
                         value: step.value,
-                        role: HighlightRole::Secondary,
+                        role: HighlightRole::Defining,
                     });
                 }
             }
@@ -170,8 +173,13 @@ pub fn build_highlights(board: &Board, step: &SolutionStep) -> Vec<CandidateHigh
 
         SolutionType::RemotePair => {
             let mut highlights = Vec::new();
-            for &idx in &step.indices {
-                add_cell_candidates(&mut highlights, board, idx, HighlightRole::Defining);
+            for (i, &idx) in step.indices.iter().enumerate() {
+                let role = if i % 2 == 0 {
+                    HighlightRole::ColorA
+                } else {
+                    HighlightRole::ColorB
+                };
+                add_cell_candidates(&mut highlights, board, idx, role);
             }
             add_eliminations(&mut highlights, step);
             highlights
