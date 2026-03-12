@@ -1,7 +1,8 @@
 pub mod highlighter;
 pub mod example;
 
-use rand::Rng;
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
 use serde::Serialize;
 
 use crate::board::Board;
@@ -57,10 +58,19 @@ pub struct Generator {
     new_valid_sudoku: [u8; 81],
     solution: [u8; 81],
     solution_count: usize,
+    rng: SmallRng,
 }
 
 impl Generator {
     pub fn new() -> Self {
+        Self::with_rng(SmallRng::from_os_rng())
+    }
+
+    pub fn with_seed(seed: u64) -> Self {
+        Self::with_rng(SmallRng::seed_from_u64(seed))
+    }
+
+    fn with_rng(rng: SmallRng) -> Self {
         let mut stack = Vec::with_capacity(82);
         for _ in 0..82 {
             stack.push(StackEntry::new());
@@ -78,6 +88,7 @@ impl Generator {
             new_valid_sudoku: [0; 81],
             solution: [0; 81],
             solution_count: 0,
+            rng,
         }
     }
 
@@ -298,10 +309,9 @@ impl Generator {
     }
 
     fn do_generate_full_grid(&mut self) -> bool {
-        let mut rng = rand::rng();
         // Shuffle cell order
         for i in 0..81 {
-            let j = rng.random_range(0..81usize);
+            let j = self.rng.random_range(0..81usize);
             self.generate_indices.swap(i, j);
         }
 
@@ -387,7 +397,6 @@ impl Generator {
     // --- Clue removal ---
 
     fn generate_init_pos(&mut self, symmetric: bool) {
-        let mut rng = rand::rng();
         let mut used = [false; 81];
         let mut used_count = 81usize;
 
@@ -395,7 +404,7 @@ impl Generator {
         let mut remaining_clues = 81usize;
 
         while remaining_clues > 17 && used_count > 1 {
-            let mut i = rng.random_range(0..81usize);
+            let mut i = self.rng.random_range(0..81usize);
             while used[i] {
                 i = if i < 80 { i + 1 } else { 0 };
             }

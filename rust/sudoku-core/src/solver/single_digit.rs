@@ -166,29 +166,19 @@ fn find_empty_rectangle(
         // Check for ER pattern: all cells aligned to one row AND one column (L-shape)
         for er_row in br..br + 3 {
             for er_col in bc..bc + 3 {
-                // Check: all box_cells are in er_row or er_col
+                // Check: all box_cells are in er_row or er_col (L/T shape)
                 if !box_cells
                     .iter()
                     .all(|&c| c / 9 == er_row || c % 9 == er_col)
                 {
                     continue;
                 }
-
-                // Case 1: strong link in row outside box
-                for link in links {
-                    if link.unit >= 18 {
-                        continue; // skip box links
-                    }
-                    if link.unit < 9 {
-                        // Row link
-                        let link_row = link.unit;
-                        if link_row < br || link_row >= br + 3 {
-                            // Outside the box
-                            continue;
-                        }
-                        // skip — row link must be outside the box rows... wait, no.
-                        // Actually we need the link OUTSIDE the block
-                    }
+                // Both arms must be populated — a straight line is a locked
+                // candidate, not an ER.
+                let has_row_arm = box_cells.iter().any(|&c| c / 9 == er_row && c % 9 != er_col);
+                let has_col_arm = box_cells.iter().any(|&c| c % 9 == er_col && c / 9 != er_row);
+                if !has_row_arm || !has_col_arm {
+                    continue;
                 }
 
                 // Case 1: Strong link in a column outside the box, one end in row er_row
@@ -215,6 +205,7 @@ fn find_empty_rectangle(
                     let target = (other_cell / 9) * 9 + er_col;
                     if target != in_row_cell
                         && target != other_cell
+                        && !box_cells.contains(&target)
                         && board.is_candidate(target, digit)
                     {
                         let mut indices = vec![in_row_cell, other_cell];
@@ -254,6 +245,7 @@ fn find_empty_rectangle(
                     let target = er_row * 9 + (other_cell % 9);
                     if target != in_col_cell
                         && target != other_cell
+                        && !box_cells.contains(&target)
                         && board.is_candidate(target, digit)
                     {
                         let mut indices = vec![in_col_cell, other_cell];

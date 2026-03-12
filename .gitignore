@@ -27,6 +27,10 @@ rust/sudoku-core/target/
 app/src/desktopMain/resources/native/
 app/src/androidMain/jniLibs/
 
+# Benchmark datasets
+*.csv
+*.zip
+
 # OS junk
 .DS_Store
 

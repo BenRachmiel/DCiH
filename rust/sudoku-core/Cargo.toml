@@ -22,6 +22,9 @@ required-features = ["uniffi/cli"]
 [[bin]]
 name = "generate-examples"
 
+[[bin]]
+name = "benchmark"
+
 [dev-dependencies]
 criterion = "0.5"
 
