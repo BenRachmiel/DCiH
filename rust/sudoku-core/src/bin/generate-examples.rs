@@ -1,12 +1,22 @@
 //! Generates pre-baked BoardExample Kotlin source for StrategyContent.kt.
 //!
-//! Run: cargo run --bin generate-examples
+//! Run: cargo run --release --bin generate-examples
 //! Output: /tmp/generated-examples.kt
+//!
+//! Usage:
+//!   generate-examples                                         # all techniques, default attempts
+//!   generate-examples --progress                              # with progress bars
+//!   generate-examples --only TurbotFish,XYZWing --attempts 1000000 --progress
 
-use sudoku_core::board::Board;
-use sudoku_core::generator::example::generate_example;
-use sudoku_core::generator::highlighter::build_highlights;
-use sudoku_core::solver::SolverOrchestrator;
+use std::env;
+use std::io::{self, Write};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Arc;
+use std::time::Instant;
+
+use sudoku_core::generator::example::{
+    example_from_puzzle, generate_example, generate_example_progress,
+};
 use sudoku_core::step::CandidateHighlight;
 use sudoku_core::types::{Difficulty, HighlightRole, SolutionType};
 
@@ -41,62 +51,21 @@ const CURATED_PUZZLES: &[&str] = &[
     "000000000100203004003010560006000100050000030004000800091080700700309002000000000",
 ];
 
-/// Try to find an example for `target_type` by solving curated puzzles.
-fn find_from_curated(target_type: SolutionType) -> Option<(String, Vec<u16>, Vec<CandidateHighlight>)> {
-    let orchestrator = SolverOrchestrator::new();
-    let threshold = completeness_threshold(target_type);
-
-    for &puzzle_str in CURATED_PUZZLES {
-        let mut board = Board::new();
-        board.load_from_string(puzzle_str);
-
-        let result = orchestrator.solve(&board, None);
-        if !result.solved {
-            continue;
-        }
-
-        // Replay to capture state at the right moment
-        let mut replay = Board::new();
-        replay.load_from_string(puzzle_str);
-
-        for step in &result.steps {
-            if step.step_type == target_type {
-                let filled = 81 - replay.unsolved as usize;
-                if filled <= threshold {
-                    let highlights = build_highlights(&replay, step);
-                    return Some((
-                        replay.to_string_compact(),
-                        replay.candidates.to_vec(),
-                        highlights,
-                    ));
-                }
-            }
-
-            if step.step_type.is_single() || step.step_type == SolutionType::BruteForce {
-                replay.set_cell(step.cell_index as usize, step.value, false);
-                replay.set_all_exposed_singles();
-            } else {
-                for &(cell, cand) in &step.candidates_removed {
-                    replay.set_candidate(cell, cand, false);
-                }
-                replay.set_all_exposed_singles();
-            }
-        }
-    }
-
-    None
+fn all_targets() -> Vec<SolutionType> {
+    (0..=30u8)
+        .map(SolutionType::from_ordinal)
+        .filter(|t| t.has_solver())
+        .collect()
 }
 
-fn completeness_threshold(t: SolutionType) -> usize {
-    if t == SolutionType::FullHouse {
-        return 81;
-    }
-    match t.difficulty() {
-        Difficulty::Easy => 60,
-        Difficulty::Medium => 65,
-        Difficulty::Hard => 70,
-        _ => 75,
-    }
+fn find_target_by_name(name: &str) -> Option<SolutionType> {
+    let lower = name.to_lowercase().replace(['-', '_', ' '], "");
+    all_targets().into_iter().find(|t| {
+        t.display_name()
+            .to_lowercase()
+            .replace(['-', '_', ' ', '(', ')'], "")
+            == lower
+    })
 }
 
 fn role_name(role: HighlightRole) -> &'static str {
@@ -110,83 +79,198 @@ fn role_name(role: HighlightRole) -> &'static str {
     }
 }
 
+fn format_example(
+    typ: SolutionType,
+    puzzle: &str,
+    masks: &[u16],
+    highlights: &[CandidateHighlight],
+) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("// {}\n", typ.display_name()));
+    out.push_str("example = BoardExample(\n");
+    out.push_str(&format!("    puzzle = \"{}\",\n", puzzle));
+    out.push_str("    candidateMasks = intArrayOf(\n");
+    for row in 0..9 {
+        let start = row * 9;
+        let vals: Vec<String> = (start..start + 9).map(|i| masks[i].to_string()).collect();
+        let comma = if row < 8 { "," } else { "" };
+        out.push_str(&format!("        {}{}\n", vals.join(", "), comma));
+    }
+    out.push_str("    ),\n");
+    out.push_str("    highlights = listOf(\n");
+    for h in highlights {
+        out.push_str(&format!(
+            "        CandidateHighlight({}, {}, {}),\n",
+            h.cell_index,
+            h.value,
+            role_name(h.role),
+        ));
+    }
+    out.push_str("    ),\n");
+    out.push_str("),\n");
+    out
+}
+
+fn print_progress(name: &str, current: u32, total: u32, elapsed: f64) {
+    let pct = (current as f64 / total as f64 * 100.0).min(100.0);
+    let rate = current as f64 / elapsed;
+    let bar_width = 30;
+    let filled = ((pct / 100.0 * bar_width as f64) as usize).min(bar_width);
+    let bar: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(bar_width - filled);
+    eprint!(
+        "\r  {:<28} [{bar}] {current:>8}/{total} ({pct:5.1}%) {rate:>7.0}/s",
+        name
+    );
+    io::stderr().flush().ok();
+}
+
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let mut only: Option<Vec<String>> = None;
+    let mut max_attempts: Option<i32> = None;
+    let mut progress = false;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--only" => {
+                i += 1;
+                if i < args.len() {
+                    only = Some(args[i].split(',').map(|s| s.to_string()).collect());
+                }
+            }
+            "--attempts" => {
+                i += 1;
+                if i < args.len() {
+                    max_attempts = Some(args[i].parse().expect("--attempts needs a number"));
+                }
+            }
+            "--progress" => {
+                progress = true;
+            }
+            _ => {
+                eprintln!("Unknown arg: {}", args[i]);
+                eprintln!("Usage: generate-examples [--progress] [--only Type1,Type2] [--attempts N]");
+                std::process::exit(1);
+            }
+        }
+        i += 1;
+    }
+
+    let targets: Vec<SolutionType> = if let Some(names) = &only {
+        names
+            .iter()
+            .map(|n| find_target_by_name(n).unwrap_or_else(|| panic!("Unknown technique: {n}")))
+            .collect()
+    } else {
+        all_targets()
+    };
+
     let mut found: Vec<(SolutionType, String, Vec<u16>, Vec<CandidateHighlight>)> = Vec::new();
     let mut missing: Vec<SolutionType> = Vec::new();
+    let total_techniques = all_targets().len();
 
-    // Collect all types with solvers
-    let targets: Vec<SolutionType> = (0..=30u8)
-        .map(SolutionType::from_ordinal)
-        .filter(|t| t.has_solver())
-        .collect();
-
-    eprintln!("Generating examples for {} techniques...", targets.len());
+    eprintln!("Generating examples for {} techniques...\n", targets.len());
 
     for &target in &targets {
-        eprint!("  {} ... ", target.display_name());
-
-        // Phase 1: curated puzzles
-        if let Some((puzzle, masks, highlights)) = find_from_curated(target) {
-            eprintln!("found (curated)");
-            found.push((target, puzzle, masks, highlights));
-            continue;
-        }
-
-        // Phase 2: random generation — scale attempts by difficulty
-        let max_attempts = match target.difficulty() {
+        // Phase 1: try generation first for fresh examples
+        let attempts = max_attempts.unwrap_or(match target.difficulty() {
             Difficulty::Easy => 500,
             Difficulty::Medium => 2000,
             Difficulty::Hard => 5000,
-            _ => 10000, // Unfair, Extreme
-        };
-        if let Some(result) = generate_example(target, max_attempts) {
-            eprintln!("found (random)");
-            found.push((target, result.puzzle, result.candidate_masks, result.highlights));
-            continue;
-        }
+            _ => 10000,
+        });
 
-        eprintln!("NOT FOUND");
-        missing.push(target);
+        let start = Instant::now();
+
+        let result = if progress {
+            let counter = Arc::new(AtomicU32::new(0));
+            let done = Arc::new(AtomicBool::new(false));
+            let total = attempts as u32;
+
+            let counter_clone = counter.clone();
+            let done_clone = done.clone();
+            let name = target.display_name().to_string();
+            let progress_start = start;
+            let progress_handle = std::thread::spawn(move || {
+                while !done_clone.load(Ordering::Relaxed) {
+                    let current = counter_clone.load(Ordering::Relaxed);
+                    let elapsed = progress_start.elapsed().as_secs_f64();
+                    if elapsed > 0.1 {
+                        print_progress(&name, current, total, elapsed);
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            });
+
+            let result = generate_example_progress(target, attempts, &counter);
+
+            done.store(true, Ordering::Relaxed);
+            progress_handle.join().ok();
+
+            let final_count = counter.load(Ordering::Relaxed);
+            let elapsed = start.elapsed().as_secs_f64();
+            print_progress(target.display_name(), final_count, total, elapsed);
+
+            result
+        } else {
+            eprint!("  {:<28} ... ", target.display_name());
+            io::stderr().flush().ok();
+            generate_example(target, attempts)
+        };
+
+        let elapsed = start.elapsed().as_secs_f64();
+
+        if let Some(result) = result {
+            if progress {
+                eprintln!(" FOUND ({elapsed:.1}s)");
+            } else {
+                eprintln!("found ({elapsed:.1}s)");
+            }
+            found.push((target, result.puzzle, result.candidate_masks, result.highlights));
+        } else {
+            // Phase 2: fall back to curated puzzles
+            let curated = CURATED_PUZZLES
+                .iter()
+                .find_map(|p| example_from_puzzle(p, target));
+            if let Some(result) = curated {
+                if progress {
+                    eprintln!(" found (curated fallback)");
+                } else {
+                    eprintln!("found (curated fallback)");
+                }
+                found.push((target, result.puzzle, result.candidate_masks, result.highlights));
+            } else {
+                if progress {
+                    eprintln!(" NOT FOUND ({elapsed:.1}s)");
+                } else {
+                    eprintln!("NOT FOUND ({elapsed:.1}s)");
+                }
+                missing.push(target);
+            }
+        }
     }
 
     // Output Kotlin source
     let mut out = String::new();
-    out.push_str("// ═══ Generated Examples ═══\n");
+    out.push_str("// \u{2550}\u{2550}\u{2550} Generated Examples \u{2550}\u{2550}\u{2550}\n");
     out.push_str(&format!(
         "// Found {} / {} types\n\n",
         found.len(),
-        targets.len()
+        total_techniques
     ));
 
     for (typ, puzzle, masks, highlights) in &found {
-        out.push_str(&format!("// {}\n", typ.display_name()));
-        out.push_str("example = BoardExample(\n");
-        out.push_str(&format!("    puzzle = \"{}\",\n", puzzle));
-        out.push_str("    candidateMasks = intArrayOf(\n");
-        for row in 0..9 {
-            let start = row * 9;
-            let vals: Vec<String> = (start..start + 9)
-                .map(|i| masks[i].to_string())
-                .collect();
-            let comma = if row < 8 { "," } else { "" };
-            out.push_str(&format!("        {}{}\n", vals.join(", "), comma));
-        }
-        out.push_str("    ),\n");
-        out.push_str("    highlights = listOf(\n");
-        for h in highlights {
-            out.push_str(&format!(
-                "        CandidateHighlight({}, {}, {}),\n",
-                h.cell_index,
-                h.value,
-                role_name(h.role),
-            ));
-        }
-        out.push_str("    ),\n");
-        out.push_str("),\n\n");
+        out.push_str(&format_example(*typ, puzzle, masks, highlights));
+        out.push('\n');
     }
 
     if !missing.is_empty() {
-        out.push_str(&format!("\n// ═══ MISSING ({}) ═══\n", missing.len()));
+        out.push_str(&format!(
+            "\n// \u{2550}\u{2550}\u{2550} MISSING ({}) \u{2550}\u{2550}\u{2550}\n",
+            missing.len()
+        ));
         for t in &missing {
             out.push_str(&format!("// {}\n", t.display_name()));
         }
@@ -195,9 +279,9 @@ fn main() {
     let output_path = "/tmp/generated-examples.kt";
     std::fs::write(output_path, &out).expect("Failed to write output");
     eprintln!(
-        "\nWritten to {} — {}/{} types",
+        "\nWritten to {} \u{2014} {}/{} types",
         output_path,
         found.len(),
-        targets.len()
+        total_techniques
     );
 }

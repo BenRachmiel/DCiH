@@ -9,16 +9,17 @@ pub struct WingSolver;
 
 impl Solver for WingSolver {
     fn find_steps(&self, board: &Board) -> Vec<SolutionStep> {
+        let mut steps = Vec::new();
         if let Some(s) = find_xy_wing(board) {
-            return vec![s];
+            steps.push(s);
         }
         if let Some(s) = find_xyz_wing(board) {
-            return vec![s];
+            steps.push(s);
         }
         if let Some(s) = find_w_wing(board) {
-            return vec![s];
+            steps.push(s);
         }
-        vec![]
+        steps
     }
 }
 

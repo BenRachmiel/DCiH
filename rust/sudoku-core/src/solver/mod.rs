@@ -57,21 +57,64 @@ impl StepFinder {
         }
     }
 
+    /// Check if a specific technique pattern exists on the board.
+    /// Runs all solvers and returns the first step matching the target type.
+    /// Does NOT respect priority order — just checks if the pattern exists.
+    pub fn find_technique(&self, board: &Board, target: SolutionType) -> Option<SolutionStep> {
+        for solver in &self.solvers {
+            let steps = solver.find_steps(board);
+            if let Some(step) = steps.into_iter().find(|s| s.step_type == target) {
+                return Some(step);
+            }
+        }
+        None
+    }
+
     pub fn find_next_step(
         &self,
         board: &Board,
         max_difficulty: Option<Difficulty>,
     ) -> Option<SolutionStep> {
+        self.find_next_step_inner(board, max_difficulty, None)
+    }
+
+    /// Like `find_next_step`, but prefers `preferred` when it exists at the
+    /// same difficulty tier as the step that would normally be chosen.
+    pub fn find_next_step_preferring(
+        &self,
+        board: &Board,
+        max_difficulty: Option<Difficulty>,
+        preferred: SolutionType,
+    ) -> Option<SolutionStep> {
+        self.find_next_step_inner(board, max_difficulty, Some(preferred))
+    }
+
+    fn find_next_step_inner(
+        &self,
+        board: &Board,
+        max_difficulty: Option<Difficulty>,
+        preferred: Option<SolutionType>,
+    ) -> Option<SolutionStep> {
         for solver in &self.solvers {
             let steps = solver.find_steps(board);
-            let step = if let Some(max_diff) = max_difficulty {
-                steps.into_iter().find(|s| s.step_type.difficulty() <= max_diff)
-            } else {
-                steps.into_iter().next()
-            };
-            if step.is_some() {
-                return step;
+            if steps.is_empty() {
+                continue;
             }
+            let eligible: Vec<SolutionStep> = if let Some(max_diff) = max_difficulty {
+                steps.into_iter().filter(|s| s.step_type.difficulty() <= max_diff).collect()
+            } else {
+                steps
+            };
+            if eligible.is_empty() {
+                continue;
+            }
+            // If we have a preferred type and it's among eligible steps, pick it
+            if let Some(pref) = preferred {
+                if let Some(step) = eligible.iter().find(|s| s.step_type == pref) {
+                    return Some(step.clone());
+                }
+            }
+            return eligible.into_iter().next();
         }
         None
     }
@@ -106,12 +149,38 @@ impl SolverOrchestrator {
     /// Solve the given board step-by-step, grading difficulty.
     /// The board is cloned internally — the original is not modified.
     pub fn solve(&self, board: &Board, max_difficulty: Option<Difficulty>) -> SolveResult {
+        self.solve_inner(board, max_difficulty, None)
+    }
+
+    /// Like `solve`, but when multiple steps of equal difficulty are available,
+    /// prefer the given technique. Used by example generation to ensure rare
+    /// techniques appear in the solve path.
+    pub fn solve_preferring(
+        &self,
+        board: &Board,
+        max_difficulty: Option<Difficulty>,
+        preferred: SolutionType,
+    ) -> SolveResult {
+        self.solve_inner(board, max_difficulty, Some(preferred))
+    }
+
+    fn solve_inner(
+        &self,
+        board: &Board,
+        max_difficulty: Option<Difficulty>,
+        preferred: Option<SolutionType>,
+    ) -> SolveResult {
         let mut work = board.clone();
         let mut steps = Vec::new();
         let mut total_score = 0i32;
 
         while !work.is_solved() {
-            let Some(step) = self.step_finder.find_next_step(&work, max_difficulty) else {
+            let step = if let Some(pref) = preferred {
+                self.step_finder.find_next_step_preferring(&work, max_difficulty, pref)
+            } else {
+                self.step_finder.find_next_step(&work, max_difficulty)
+            };
+            let Some(step) = step else {
                 break;
             };
 

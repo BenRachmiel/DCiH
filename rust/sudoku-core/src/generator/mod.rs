@@ -53,7 +53,7 @@ mod serde_big_array {
 pub struct Generator {
     stack: Vec<StackEntry>,
     generate_indices: [u8; 81],
-    new_full_sudoku: [u8; 81],
+    pub(crate) new_full_sudoku: [u8; 81],
     new_valid_sudoku: [u8; 81],
     solution: [u8; 81],
     solution_count: usize,
@@ -289,7 +289,7 @@ impl Generator {
 
     // --- Full grid generation ---
 
-    fn generate_full_grid(&mut self) {
+    pub(crate) fn generate_full_grid(&mut self) {
         loop {
             if self.do_generate_full_grid() {
                 return;

@@ -9,16 +9,15 @@ pub struct ColoringSolver;
 
 impl Solver for ColoringSolver {
     fn find_steps(&self, board: &Board) -> Vec<SolutionStep> {
+        let mut steps = Vec::new();
         for digit in 1..=9u8 {
-            if let Some(s) = find_simple_colors(board, digit) {
-                return vec![s];
-            }
+            find_simple_colors(board, digit, &mut steps);
         }
-        vec![]
+        steps
     }
 }
 
-fn find_simple_colors(board: &Board, digit: u8) -> Option<SolutionStep> {
+fn find_simple_colors(board: &Board, digit: u8, results: &mut Vec<SolutionStep>) {
     // Build strong links (conjugate pairs)
     let mut strong_links: Vec<Vec<usize>> = vec![Vec::new(); 81];
     for unit in &ALL_UNITS {
@@ -101,12 +100,13 @@ fn find_simple_colors(board: &Board, digit: u8) -> Option<SolutionStep> {
                 if !elims.is_empty() {
                     let mut indices = true_color_cells.clone();
                     indices.extend(false_color_cells);
-                    return Some(SolutionStep::elimination(
+                    results.push(SolutionStep::elimination(
                         step_type,
                         indices,
                         digit,
                         elims,
                     ));
+                    return; // Wrap found for this digit — skip Trap check
                 }
             }
         }
@@ -125,14 +125,14 @@ fn find_simple_colors(board: &Board, digit: u8) -> Option<SolutionStep> {
             if sees_a && sees_b {
                 let mut indices = color_a.clone();
                 indices.extend(&color_b);
-                return Some(SolutionStep::elimination(
+                results.push(SolutionStep::elimination(
                     SolutionType::SimpleColorsTrap,
                     indices,
                     digit,
                     vec![(cell, digit)],
                 ));
+                return; // One result per digit is enough
             }
         }
     }
-    None
 }

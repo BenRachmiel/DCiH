@@ -9,16 +9,17 @@ pub struct SingleDigitPatternSolver;
 
 impl Solver for SingleDigitPatternSolver {
     fn find_steps(&self, board: &Board) -> Vec<SolutionStep> {
+        let mut steps = Vec::new();
         for digit in 1..=9u8 {
             let links = find_strong_links(board, digit);
             if let Some(s) = find_empty_rectangle(board, digit, &links) {
-                return vec![s];
+                steps.push(s);
             }
             if let Some(s) = find_two_link_pattern(board, digit, &links) {
-                return vec![s];
+                steps.push(s);
             }
         }
-        vec![]
+        steps
     }
 }
 
