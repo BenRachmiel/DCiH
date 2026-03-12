@@ -23,9 +23,6 @@ kotlin {
         // Intermediate JVM source set shared by Android and Desktop
         val jvmMain by creating {
             dependsOn(commonMain.get())
-            dependencies {
-                implementation("net.java.dev.jna:jna:5.17.0")
-            }
         }
 
         commonMain.dependencies {
@@ -44,12 +41,14 @@ kotlin {
             dependsOn(jvmMain)
             dependencies {
                 implementation("androidx.activity:activity-compose:1.9.3")
+                implementation("net.java.dev.jna:jna:5.17.0@aar")
             }
         }
         val desktopMain by getting {
             dependsOn(jvmMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation("net.java.dev.jna:jna:5.17.0")
             }
         }
     }
